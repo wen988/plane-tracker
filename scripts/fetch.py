@@ -25,6 +25,14 @@ WEATHER_PARAMS = {
     "longitude": 114.85,
     "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,visibility",
 }
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+FORECAST_PARAMS = {
+    "latitude": 37.97,
+    "longitude": 114.85,
+    "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability,wind_speed_10m,wind_direction_10m,weather_code,visibility",
+    "timezone": "Asia/Shanghai",
+    "forecast_days": 1,
+}
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -83,6 +91,32 @@ def fetch_weather() -> dict:
         return {}
 
 
+def fetch_forecast() -> dict:
+    """抓取藁城区24小时天气预报"""
+    try:
+        r = requests.get(FORECAST_URL, params=FORECAST_PARAMS, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        hourly = data.get("hourly", {})
+        times = hourly.get("time", [])
+        result = []
+        for i, t in enumerate(times):
+            result.append({
+                "time": t,
+                "temperature": hourly.get("temperature_2m", [None])[i] if i < len(hourly.get("temperature_2m", [])) else None,
+                "humidity": hourly.get("relative_humidity_2m", [None])[i] if i < len(hourly.get("relative_humidity_2m", [])) else None,
+                "precip_prob": hourly.get("precipitation_probability", [None])[i] if i < len(hourly.get("precipitation_probability", [])) else None,
+                "wind_speed": hourly.get("wind_speed_10m", [None])[i] if i < len(hourly.get("wind_speed_10m", [])) else None,
+                "wind_direction": hourly.get("wind_direction_10m", [None])[i] if i < len(hourly.get("wind_direction_10m", [])) else None,
+                "weather_code": hourly.get("weather_code", [None])[i] if i < len(hourly.get("weather_code", [])) else None,
+                "visibility": hourly.get("visibility", [None])[i] if i < len(hourly.get("visibility", [])) else None,
+            })
+        return {"hourly": result}
+    except Exception as e:
+        print(f"Forecast fetch failed: {e}")
+        return {"hourly": []}
+
+
 def main():
     print(f"[{datetime.now(tz).isoformat()}] Fetching plane data...")
     try:
@@ -93,6 +127,7 @@ def main():
 
     print("Fetching weather...")
     weather = fetch_weather()
+    forecast = fetch_forecast()
 
     timestamp = datetime.now(tz).isoformat()
     record = {
@@ -101,6 +136,7 @@ def main():
         "bbox": {"lamin": LAMIN, "lamax": LAMAX, "lomin": LOMIN, "lomax": LOMAX},
         "planes": planes,
         "weather": weather,
+        "forecast": forecast,
     }
 
     date_str = datetime.now(tz).strftime("%Y-%m-%d")
