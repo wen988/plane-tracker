@@ -125,6 +125,7 @@ def generate_index_html(data, records):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
 <title>藁城上空 - 飞机追踪</title>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
@@ -255,8 +256,6 @@ function sha256(str) {
 
 function checkPw() {
     const input = document.getElementById('pw-input').value;
-    const hash = sha256(input);
-    // 简化的哈希比对 — 生产环境应使用完整 SHA-256
     if (input === 'gaocheng') {
         document.getElementById('pw-overlay').classList.add('hidden');
         document.getElementById('main-content').classList.remove('hidden');
@@ -435,6 +434,7 @@ def generate_weather_html(data, records):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
 <title>藁城气象仪表盘</title>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
