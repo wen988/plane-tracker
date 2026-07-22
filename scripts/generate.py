@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""从 data/ 读取历史快照，生成苹果风仪表盘"""
+"""生成苹果风藁城上空飞行追踪仪表盘（含地图、气象、密码保护）"""
 
 import json
-from collections import defaultdict
+import hashlib
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from statistics import mean, median
+from collections import defaultdict
+from statistics import mean
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
@@ -13,15 +14,25 @@ DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
 tz = timezone(timedelta(hours=8))
 
+# --- 密码哈希（默认：gaocheng，想改密码就改下面一行）---
+PASSWORD_HASH = hashlib.sha256("gaocheng".encode()).hexdigest()
+
+CENTER_LAT, CENTER_LNG = 37.94, 114.84
+
+WEATHER_LABELS = {
+    0: "晴", 1: "大部晴", 2: "多云", 3: "阴",
+    45: "雾", 48: "雾凇", 51: "小毛毛雨", 53: "毛毛雨", 55: "大毛毛雨",
+    61: "小雨", 63: "中雨", 65: "大雨", 71: "小雪", 73: "中雪", 75: "大雪",
+    80: "阵雨", 81: "中阵雨", 82: "大阵雨", 95: "雷暴", 96: "冰雹雷暴", 99: "强冰雹雷暴",
+}
+
 
 def load_all_snapshots():
-    """加载所有日期的快照，返回 (日期, 快照列表) 的列表"""
     result = []
     for f in sorted(DATA_DIR.glob("snapshot-*.json")):
         date_str = f.stem.replace("snapshot-", "")
         try:
-            snaps = json.loads(f.read_text(encoding="utf-8"))
-            result.append((date_str, snaps))
+            result.append((date_str, json.loads(f.read_text(encoding="utf-8"))))
         except (json.JSONDecodeError, ValueError):
             continue
     return result
@@ -29,29 +40,72 @@ def load_all_snapshots():
 
 def load_today():
     today = datetime.now(tz).strftime("%Y-%m-%d")
-    snap_file = DATA_DIR / f"snapshot-{today}.json"
-    if not snap_file.exists():
+    f = DATA_DIR / f"snapshot-{today}.json"
+    if not f.exists():
         return []
-    return json.loads(snap_file.read_text(encoding="utf-8"))
+    return json.loads(f.read_text(encoding="utf-8"))
 
 
-def build_dashboard():
+def build():
     all_data = load_all_snapshots()
     today_snaps = load_today()
 
-    # ---- 今日数据 ----
     latest = today_snaps[-1] if today_snaps else None
     planes = latest["planes"] if latest else []
+    weather = latest.get("weather", {}) if latest else {}
     ts = latest["timestamp"] if latest else ""
-    total_today = sum(s["count"] for s in today_snaps)
 
+    total_today = sum(s["count"] for s in today_snaps)
     alts = [p["altitude"] for p in planes if p["altitude"] is not None]
     avg_alt = mean(alts) if alts else 0
     max_alt = max(alts) if alts else 0
-    min_alt = min(alts) if alts else 0
-    on_ground = sum(1 for p in planes if p["on_ground"])
+    on_ground = sum(1 for p in planes if p.get("on_ground"))
 
-    # ---- 今日每小时统计 ----
+    wcode = weather.get("weather_code")
+    weather_desc = WEATHER_LABELS.get(wcode, "—") if wcode is not None else "—"
+    temp = weather.get("temperature", "—")
+    humidity = weather.get("humidity", "—")
+    wind_speed = weather.get("wind_speed", "—")
+    wind_dir = weather.get("wind_direction", "—")
+    visibility = weather.get("visibility", "—")
+
+    markers_js_parts = []
+    for p in planes:
+        lat = p.get("latitude")
+        lng = p.get("longitude")
+        if lat is None or lng is None:
+            continue
+        alt = f'{p["altitude"]:.0f}m' if p.get("altitude") else "?"
+        spd = f'{p["velocity"]:.0f}m/s' if p.get("velocity") else "?"
+        cs = p.get("callsign") or "N/A"
+        hdg = p.get("heading")
+        rotate = f"rotate({hdg}deg)" if hdg is not None else "rotate(0deg)"
+        on_gnd = p.get("on_ground", False)
+        color = "#34c759" if on_gnd else "#0071e3"
+        markers_js_parts.append(
+            f'L.marker([{lat},{lng}],{{icon:L.divIcon({{className:"plane-icon",html:\'<div style="transform:{rotate};color:{color};font-size:18px">✈</div>\',iconSize:[28,28],iconAnchor:[14,14]}})}}).bindPopup(\'<b>{cs}</b><br>高度:{alt}<br>速度:{spd}\').addTo(map);'
+        )
+    markers_js = "\n".join(markers_js_parts)
+
+    rows = ""
+    for p in sorted(planes, key=lambda x: x.get("altitude") or 0, reverse=True):
+        alt = f'{p["altitude"]:.0f} m' if p["altitude"] else "—"
+        spd = f'{p["velocity"]:.0f} m/s' if p["velocity"] else "—"
+        hdg = f'{p["heading"]:.0f}°' if p.get("heading") is not None else "—"
+        cs = p.get("callsign") or "—"
+        status = "地面" if p.get("on_ground") else "飞行中"
+        lat = f'{p["latitude"]:.4f}' if p.get("latitude") else "—"
+        lng = f'{p["longitude"]:.4f}' if p.get("longitude") else "—"
+        rows += f'<tr><td><span class="callsign">{cs}</span></td><td>{alt}</td><td>{spd}</td><td>{hdg}</td><td>{status}</td><td class="coord">{lat}, {lng}</td></tr>'
+
+    daily_totals = []
+    for date_str, snaps in all_data:
+        daily_totals.append({"date": date_str, "total": sum(s["count"] for s in snaps)})
+
+    daily_items = ""
+    for d in daily_totals[-7:]:
+        daily_items += f'<div class="daily-item"><span class="daily-num">{d["total"]}</span><span class="daily-date">{d["date"][-5:]}</span></div>'
+
     hourly = defaultdict(int)
     for s in today_snaps:
         try:
@@ -61,335 +115,131 @@ def build_dashboard():
             continue
     hourly_labels = sorted(hourly.keys())
     hourly_values = [hourly[h] for h in hourly_labels]
-
-    # ---- 每日总量统计 ----
-    daily_totals = []
-    for date_str, snaps in all_data:
-        daily_totals.append({"date": date_str, "total": sum(s["count"] for s in snaps)})
-
-    # ---- 今日高度分布 ----
-    alt_bins = {"0-1000m": 0, "1000-3000m": 0, "3000-6000m": 0, "6000-9000m": 0, "9000m+": 0}
-    for a in alts:
-        if a < 1000: alt_bins["0-1000m"] += 1
-        elif a < 3000: alt_bins["1000-3000m"] += 1
-        elif a < 6000: alt_bins["3000-6000m"] += 1
-        elif a < 9000: alt_bins["6000-9000m"] += 1
-        else: alt_bins["9000m+"] += 1
-
-    # ---- 回放数据：最近24小时的时间线 ----
-    replay_data = []
-    for date_str, snaps in all_data:
-        for s in snaps:
-            try:
-                t = datetime.fromisoformat(s["timestamp"])
-                replay_data.append({
-                    "time": t.strftime("%m-%d %H:%M"),
-                    "count": s["count"],
-                })
-            except (ValueError, KeyError):
-                continue
-    # 只取最近24小时
-    replay_data = replay_data[-48:]
-
-    # ---- 今日飞机表格 ----
-    rows = ""
-    for i, p in enumerate(sorted(planes, key=lambda x: x.get("altitude") or 0, reverse=True)):
-        alt = f'{p["altitude"]:.0f} m' if p["altitude"] else "-"
-        spd = f'{p["velocity"]:.0f} m/s' if p["velocity"] else "-"
-        hdg = f'{p["heading"]:.0f}°' if p["heading"] is not None else "-"
-        callsign = p["callsign"] or "-"
-        lat = f'{p["latitude"]:.4f}' if p["latitude"] else "-"
-        lon = f'{p["longitude"]:.4f}' if p["longitude"] else "-"
-        rows += f"""<tr>
-            <td>{callsign}</td><td>{alt}</td><td>{spd}</td><td>{hdg}</td><td>{lat}, {lon}</td>
-        </tr>"""
-
-    # ---- 回放JS数据 ----
-    replay_js = json.dumps(replay_data, ensure_ascii=False)
+    max_hourly = max(hourly_values) if hourly_values else 1
+    bar_chart = ""
+    for h, v in zip(hourly_labels, hourly_values):
+        pct = max(4, int(v / max_hourly * 100))
+        bar_chart += f'<div class="hbar"><div class="hbar-fill" style="height:{pct}%"></div><span class="hbar-val">{v}</span><span class="hbar-label">{h}:00</span></div>'
 
     html = f"""<!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>藁城上空 · SkyWatch</title>
+<meta name="robots" content="noindex, nofollow">
+<title>SkyWatch · 藁城</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-:root {{
-    --bg: #f5f5f7;
-    --card: rgba(255,255,255,0.72);
-    --card-hover: rgba(255,255,255,0.88);
-    --text: #1d1d1f;
-    --secondary: #86868b;
-    --accent: #0071e3;
-    --green: #34c759;
-    --orange: #ff9500;
-    --red: #ff3b30;
-    --border: rgba(0,0,0,0.06);
-    --shadow: 0 8px 32px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02);
-}}
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    padding: 40px 48px;
-    -webkit-font-smoothing: antialiased;
-}}
-header {{ margin-bottom: 36px; }}
-header h1 {{ font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }}
-header p {{ color: var(--secondary); font-size: 15px; margin-top: 6px; }}
-
-/* Stats grid */
-.stats {{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
-}}
-.stat-card {{
-    background: var(--card);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 18px;
-    padding: 20px 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    transition: transform 0.2s, background 0.2s;
-}}
-.stat-card:hover {{ background: var(--card-hover); transform: translateY(-2px); }}
-.stat-card .value {{ font-size: 34px; font-weight: 700; letter-spacing: -1px; }}
-.stat-card .label {{ font-size: 13px; color: var(--secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }}
-.value.blue {{ color: var(--accent); }}
-.value.green {{ color: var(--green); }}
-.value.orange {{ color: var(--orange); }}
-
-/* Panel */
-.panel {{
-    background: var(--card);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 18px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    padding: 28px;
-    margin-bottom: 24px;
-}}
-.panel h2 {{
-    font-size: 20px; font-weight: 600; margin-bottom: 20px;
-    display: flex; align-items: center; gap: 10px;
-}}
-
-/* Replay */
-.replay-controls {{
-    display: flex; gap: 12px; margin-bottom: 16px; align-items: center;
-}}
-.btn {{
-    padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.12);
-    background: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500;
-    cursor: pointer; font-family: inherit; color: var(--text);
-    transition: all 0.15s;
-}}
-.btn:hover {{ background: rgba(0,0,0,0.04); }}
-.btn.active {{ background: var(--accent); color: #fff; border-color: var(--accent); }}
-.replay-bar {{
-    height: 6px; background: rgba(0,0,0,0.06); border-radius: 3px;
-    position: relative; overflow: hidden; flex: 1; margin: 0 8px;
-}}
-.replay-progress {{
-    height: 100%; background: var(--accent); border-radius: 3px;
-    transition: width 0.3s;
-}}
-.replay-label {{ font-size: 12px; color: var(--secondary); min-width: 70px; text-align: center; }}
-
-/* Hourly chart */
-.bars {{
-    display: flex; align-items: flex-end; gap: 8px; height: 140px;
-    padding-top: 8px;
-}}
-.bar {{
-    flex: 1; background: var(--accent); border-radius: 6px 6px 0 0;
-    min-height: 4px; opacity: 0.8; transition: opacity 0.2s;
-    position: relative;
-}}
-.bar:hover {{ opacity: 1; }}
-.bar .tip {{
-    position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
-    font-size: 11px; color: var(--secondary); white-space: nowrap;
-    opacity: 0; transition: opacity 0.2s;
-}}
-.bar:hover .tip {{ opacity: 1; }}
-.bar .hour {{
-    position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
-    font-size: 11px; color: var(--secondary);
-}}
-
-/* Altitude distribution */
-.alt-bars {{
-    display: flex; gap: 12px; flex-wrap: wrap;
-}}
-.alt-bar {{
-    flex: 1; min-width: 90px; text-align: center;
-}}
-.alt-bar .fill {{
-    height: 80px; background: rgba(0,0,0,0.06); border-radius: 10px;
-    position: relative; overflow: hidden; margin-bottom: 8px;
-}}
-.alt-bar .level {{
-    position: absolute; bottom: 0; width: 100%;
-    background: linear-gradient(180deg, var(--accent), rgba(0,113,227,0.3));
-    border-radius: 10px 10px 0 0; transition: height 0.4s;
-}}
-.alt-bar .num {{ font-size: 15px; font-weight: 600; }}
-.alt-bar .range {{ font-size: 11px; color: var(--secondary); }}
-
-/* Table */
-table {{ width: 100%; border-collapse: collapse; }}
-th {{ text-align: left; padding: 12px 16px; font-size: 12px; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }}
-td {{ padding: 11px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }}
-tr:last-child td {{ border-bottom: none; }}
-tr:hover td {{ background: rgba(0,0,0,0.02); }}
-
-/* Daily totals */
-.daily-list {{
-    display: flex; gap: 12px; flex-wrap: wrap;
-}}
-.daily-item {{
-    flex: 1; min-width: 100px; text-align: center;
-    background: rgba(0,0,0,0.02); border-radius: 12px; padding: 14px 10px;
-}}
-.daily-item .num {{ font-size: 20px; font-weight: 700; }}
-.daily-item .date {{ font-size: 11px; color: var(--secondary); margin-top: 4px; }}
-
-footer {{
-    text-align: center; color: var(--secondary); font-size: 12px;
-    margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border);
-}}
-
-@media (max-width: 768px) {{
-    body {{ padding: 20px 16px; }}
-    .stats {{ grid-template-columns: repeat(2, 1fr); }}
-}}
+:root{{--bg:#fff;--card:#fff;--text:#1d1d1f;--sec:#86868b;--accent:#0071e3;--green:#34c759;--orange:#ff9500;--border:rgba(0,0,0,.06);--shadow:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02)}}
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.6}}
+.auth-overlay{{position:fixed;inset:0;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);z-index:9999;display:flex;align-items:center;justify-content:center}}
+.auth-box{{text-align:center;padding:48px;max-width:360px;width:100%}}
+.auth-box h2{{font-size:24px;font-weight:500;margin-bottom:8px;letter-spacing:-.3px}}
+.auth-box p{{color:var(--sec);font-size:15px;margin-bottom:24px}}
+.auth-box input{{width:100%;padding:12px 16px;border:1px solid rgba(0,0,0,.12);border-radius:10px;font-size:16px;font-family:inherit;outline:none;transition:border-color .2s}}
+.auth-box input:focus{{border-color:var(--accent)}}
+.auth-box .err{{color:#ff3b30;font-size:13px;margin-top:8px;display:none}}
+nav{{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.72);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);padding:0 32px;height:52px;display:flex;align-items:center;justify-content:space-between}}
+nav .logo{{font-size:18px;font-weight:600;letter-spacing:-.3px}}
+nav .time{{font-size:13px;color:var(--sec)}}
+#map{{height:520px;width:100%;margin-top:52px}}
+.leaflet-container{{background:#f5f5f7}}
+.plane-icon div{{transition:transform .3s}}
+.content{{max-width:1100px;margin:0 auto;padding:0 32px}}
+.stats-row{{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:32px 0 24px}}
+.stat{{text-align:center;padding:16px 12px;border-radius:16px;background:var(--card);box-shadow:var(--shadow);border:1px solid var(--border)}}
+.stat-val{{font-size:32px;font-weight:600;letter-spacing:-1px;color:var(--accent)}}
+.stat-lbl{{font-size:12px;color:var(--sec);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}}
+.stat-val.green{{color:var(--green)}}
+.stat-val.orange{{color:var(--orange)}}
+.panel{{background:var(--card);border-radius:20px;box-shadow:var(--shadow);border:1px solid var(--border);padding:28px;margin-bottom:20px}}
+.panel h3{{font-size:18px;font-weight:600;margin-bottom:16px;letter-spacing:-.2px}}
+.weather-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px}}
+.weather-item{{text-align:center;padding:12px 8px;border-radius:12px;background:rgba(0,0,0,.02)}}
+.weather-item .w-val{{font-size:20px;font-weight:600;color:var(--text)}}
+.weather-item .w-lbl{{font-size:11px;color:var(--sec);margin-top:2px}}
+.hbars{{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:4px}}
+.hbar{{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative}}
+.hbar-fill{{width:100%;background:var(--accent);border-radius:6px 6px 0 0;min-height:2px;opacity:.75}}
+.hbar-val{{font-size:11px;color:var(--sec);margin-bottom:4px}}
+.hbar-label{{font-size:10px;color:var(--sec);margin-top:6px;position:absolute;bottom:-18px}}
+.daily-row{{display:flex;gap:8px}}
+.daily-item{{flex:1;text-align:center;padding:10px;border-radius:12px;background:rgba(0,0,0,.02)}}
+.daily-num{{display:block;font-size:18px;font-weight:600}}
+.daily-date{{display:block;font-size:11px;color:var(--sec);margin-top:2px}}
+table{{width:100%;border-collapse:collapse;font-size:14px}}
+th{{text-align:left;padding:10px 12px;font-size:11px;color:var(--sec);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-weight:500}}
+td{{padding:9px 12px;border-bottom:1px solid var(--border)}}
+tr:last-child td{{border-bottom:none}}
+.callsign{{font-weight:500}}
+.coord{{font-size:12px;color:var(--sec);font-family:"SF Mono",monospace}}
+.fade-in{{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}}
+.fade-in.visible{{opacity:1;transform:translateY(0)}}
+footer{{text-align:center;padding:32px;color:var(--sec);font-size:12px;border-top:1px solid var(--border);margin-top:40px}}
+@media(max-width:768px){{nav{{padding:0 16px}}#map{{height:360px}}.content{{padding:0 16px}}.stats-row{{grid-template-columns:repeat(3,1fr);gap:8px}}}}
 </style>
 </head>
 <body>
-
-<header>
-    <h1>SkyWatch</h1>
-    <p>藁城上空 · 实时飞行追踪 — 数据来源 OpenSky Network · 更新时间 {ts}</p>
-</header>
-
-<!-- 统计卡片 -->
-<div class="stats">
-    <div class="stat-card">
-        <div class="value blue">{len(planes)}</div>
-        <div class="label">当前空域</div>
-    </div>
-    <div class="stat-card">
-        <div class="value">{total_today}</div>
-        <div class="label">今日累计观测</div>
-    </div>
-    <div class="stat-card">
-        <div class="value green">{avg_alt:.0f}m</div>
-        <div class="label">平均高度</div>
-    </div>
-    <div class="stat-card">
-        <div class="value orange">{max_alt:.0f}m</div>
-        <div class="label">最高飞行</div>
-    </div>
-    <div class="stat-card">
-        <div class="value">{min_alt:.0f}m</div>
-        <div class="label">最低飞行</div>
-    </div>
-    <div class="stat-card">
-        <div class="value">{on_ground}</div>
-        <div class="label">地面停靠</div>
-    </div>
+<div class="auth-overlay" id="auth">
+  <div class="auth-box"><h2>SkyWatch</h2><p>藁城上空飞行追踪</p>
+  <input type="password" id="pwd" placeholder="请输入密码" autofocus onkeydown="if(event.key==='Enter')unlock()">
+  <div class="err" id="err">密码错误</div></div>
 </div>
-
-<!-- 回放面板 -->
-<div class="panel">
-    <h2>⏯ 24小时回放</h2>
-    <div class="replay-controls">
-        <button class="btn" onclick="replayStart()">▶ 播放</button>
-        <button class="btn" onclick="replayPause()">⏸ 暂停</button>
-        <button class="btn" onclick="replayReset()">↺ 重置</button>
-        <div class="replay-bar"><div class="replay-progress" id="replayBar"></div></div>
-        <span class="replay-label" id="replayLabel">--</span>
+<nav><span class="logo">SkyWatch</span><span class="time">藁城 · {ts[:16] if ts else '—'}</span></nav>
+<div id="map"></div>
+<div class="content">
+  <div class="stats-row fade-in">
+    <div class="stat"><div class="stat-val">{len(planes)}</div><div class="stat-lbl">当前空域</div></div>
+    <div class="stat"><div class="stat-val green">{total_today}</div><div class="stat-lbl">今日累计</div></div>
+    <div class="stat"><div class="stat-val">{avg_alt:.0f}m</div><div class="stat-lbl">平均高度</div></div>
+    <div class="stat"><div class="stat-val orange">{max_alt:.0f}m</div><div class="stat-lbl">最高飞行</div></div>
+    <div class="stat"><div class="stat-val">{on_ground}</div><div class="stat-lbl">地面停靠</div></div>
+  </div>
+  <div class="panel fade-in"><h3>实时气象</h3>
+    <div class="weather-grid">
+      <div class="weather-item"><div class="w-val">{weather_desc}</div><div class="w-lbl">天气</div></div>
+      <div class="weather-item"><div class="w-val">{temp}°C</div><div class="w-lbl">温度</div></div>
+      <div class="weather-item"><div class="w-val">{humidity}%</div><div class="w-lbl">湿度</div></div>
+      <div class="weather-item"><div class="w-val">{wind_speed} m/s</div><div class="w-lbl">风速</div></div>
+      <div class="weather-item"><div class="w-val">{wind_dir}°</div><div class="w-lbl">风向</div></div>
+      <div class="weather-item"><div class="w-val">{visibility} m</div><div class="w-lbl">能见度</div></div>
     </div>
-</div>
-
-<!-- 今日每小时统计 -->
-<div class="panel">
-    <h2>📊 今日每小时观测量</h2>
-    <div class="bars">
-        {"".join(
-            f'<div class="bar" style="height:{max(4, int(v / (max(hourly_values) or 1)*130))}px"><span class="tip">{v}</span><span class="hour">{h}时</span></div>'
-            for h, v in zip(hourly_labels, hourly_values)
-        ) if hourly_values else '<p style="color:var(--secondary)">数据采集中…</p>'}
-    </div>
-</div>
-
-<!-- 高度分布 -->
-<div class="panel">
-    <h2>📐 今日高度分布</h2>
-    <div class="alt-bars">
-        {''.join(
-            f'<div class="alt-bar"><div class="fill"><div class="level" style="height:{max(4, int(c/max(alt_bins.values())*80) if max(alt_bins.values())>0 else 4)}px"></div></div><div class="num">{c}</div><div class="range">{k}</div></div>'
-            for k, c in alt_bins.items()
-        )}
-    </div>
-</div>
-
-<!-- 每日总量 -->
-<div class="panel">
-    <h2>📅 每日飞行总量</h2>
-    <div class="daily-list">
-        {''.join(
-            f'<div class="daily-item"><div class="num">{d["total"]}</div><div class="date">{d["date"][-5:]}</div></div>'
-            for d in daily_totals[-14:]
-        ) if daily_totals else '<p style="color:var(--secondary)">数据采集中…</p>'}
-    </div>
-</div>
-
-<!-- 当前飞机列表 -->
-<div class="panel">
-    <h2>🛩 当前空域 ({len(planes)} 架)</h2>
+  </div>
+  <div class="panel fade-in"><h3>今日每小时观测量</h3>
+    <div class="hbars">{bar_chart if bar_chart else '<p style="color:var(--sec);font-size:14px">数据采集中…</p>'}</div>
+  </div>
+  <div class="panel fade-in"><h3>近七日观测总量</h3>
+    <div class="daily-row">{daily_items if daily_items else '<p style="color:var(--sec);font-size:14px">数据采集中…</p>'}</div>
+  </div>
+  <div class="panel fade-in"><h3>当前空域 ({len(planes)} 架)</h3>
+    <div style="overflow-x:auto">
     <table>
-    <tr><th>呼号</th><th>高度</th><th>速度</th><th>航向</th><th>位置</th></tr>
-    {rows if rows else '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--secondary)">暂无数据，等待采集…</td></tr>'}
-    </table>
+    <tr><th>呼号</th><th>高度</th><th>速度</th><th>航向</th><th>状态</th><th>坐标</th></tr>
+    {rows if rows else '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--sec)">暂无数据</td></tr>'}
+    </table></div>
+  </div>
 </div>
-
-<footer>
-    SkyWatch · 藁城上空飞行追踪 · 数据来源 OpenSky Network · 每小时自动更新 · Powered by GitHub Actions
-</footer>
-
+<footer>SkyWatch · 仅你可见 · 数据来源 OpenSky Network &amp; Open-Meteo</footer>
 <script>
-const replayData = {replay_js};
-let replayIdx = 0;
-let replayTimer = null;
-
-function updateReplay() {{
-    if (replayIdx >= replayData.length) {{ replayPause(); return; }}
-    const d = replayData[replayIdx];
-    document.getElementById('replayBar').style.width = ((replayIdx+1)/replayData.length*100) + '%';
-    document.getElementById('replayLabel').textContent = d.time + ' · ' + d.count + '架';
-    replayIdx++;
-}}
-
-function replayStart() {{ replayPause(); replayTimer = setInterval(updateReplay, 300); }}
-function replayPause() {{ clearInterval(replayTimer); }}
-function replayReset() {{ replayPause(); replayIdx = 0; document.getElementById('replayBar').style.width = '0'; document.getElementById('replayLabel').textContent = '--'; }}
+const HASH='{PASSWORD_HASH}';
+async function unlock(){{const e=document.getElementById('pwd').value;const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(e));const x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');if(x===HASH){{document.getElementById('auth').style.display='none';sessionStorage.setItem('skywatch_auth','1')}}else{{document.getElementById('err').style.display='block'}}}}
+if(sessionStorage.getItem('skywatch_auth')==='1'){{document.getElementById('auth').style.display='none'}}
+const map=L.map('map',{{attributionControl:false,zoomControl:false}}).setView([{CENTER_LAT},{CENTER_LNG}],11);
+L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}{{r}}.png',{{attribution:'&copy; CartoDB',maxZoom:18}}).addTo(map);
+L.control.zoom({{position:'bottomright'}}).addTo(map);
+{markers_js}
+const obs=new IntersectionObserver((e)=>{{e.forEach(en=>{{if(en.isIntersecting){{en.target.classList.add('visible');obs.unobserve(en.target)}}}})}},{{threshold:.15}});
+document.querySelectorAll('.fade-in').forEach(el=>obs.observe(el));
 </script>
-
 </body>
 </html>"""
-
     return html
 
 
 def main():
-    html = build_dashboard()
+    html = build()
     (DOCS_DIR / "index.html").write_text(html, encoding="utf-8")
     print(f"Generated docs/index.html ({len(html)} chars)")
 
