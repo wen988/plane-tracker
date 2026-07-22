@@ -1,16 +1,21 @@
 name: Fetch Plane Data
 
+
 on:
   schedule:
-    - cron: "30 */2 * * *"
+    - cron: "30 */2 * * *"→ Runs at 30 minutes past the hour, every 2 hours
+
   workflow_dispatch:
+
 
 permissions:
   contents: write
 
+
 concurrency:
   group: fetch-plane-data
   cancel-in-progress: false
+
 
 jobs:
   fetch:
@@ -21,25 +26,32 @@ jobs:
           ref: main
           fetch-depth: 0
 
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+
       - name: Install dependencies
         run: pip install requests
+
 
       - name: Fetch plane data
         run: python scripts/fetch.py
 
+
       - name: Generate web page
         run: python scripts/generate.py
+
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git stash --include-untracked
+          git pull --rebase origin main
+          git stash pop || true
           git add data/ docs/
           if git diff --staged --quiet; then echo "No changes"; exit 0; fi
-          git pull --rebase origin main
           git commit -m "Auto update"
           git push
