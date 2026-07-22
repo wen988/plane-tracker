@@ -3,58 +3,266 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>藁城上空 · 飞机追踪面板</title>
+<title>藁城上空 · SkyWatch</title>
 <style>
+:root {
+    --bg: #f5f5f7;
+    --card: rgba(255,255,255,0.72);
+    --card-hover: rgba(255,255,255,0.88);
+    --text: #1d1d1f;
+    --secondary: #86868b;
+    --accent: #0071e3;
+    --green: #34c759;
+    --orange: #ff9500;
+    --red: #ff3b30;
+    --border: rgba(0,0,0,0.06);
+    --shadow: 0 8px 32px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02);
+}
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: -apple-system, sans-serif; background:#0a0e17; color:#c8d6e5; padding:24px; }
-h1 { font-size:22px; color:#54a0ff; margin-bottom:4px; }
-.sub { font-size:13px; color:#8395a7; margin-bottom:20px; }
-.cards { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
-.card { background:#1e272e; border-radius:10px; padding:18px 24px; min-width:150px; }
-.card .num { font-size:32px; font-weight:700; color:#feca57; }
-.card .label { font-size:13px; color:#8395a7; margin-top:4px; }
-table { width:100%; border-collapse:collapse; background:#1e272e; border-radius:10px; overflow:hidden; }
-th { text-align:left; padding:12px 16px; background:#2c3e50; font-size:13px; color:#54a0ff; }
-td { padding:10px 16px; font-size:13px; border-bottom:1px solid #2c3e50; }
-tr:hover { background:#2c3e50; }
-.footer { margin-top:20px; font-size:12px; color:#576574; text-align:center; }
-.footer a { color:#54a0ff; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 40px 48px;
+    -webkit-font-smoothing: antialiased;
+}
+header { margin-bottom: 36px; }
+header h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+header p { color: var(--secondary); font-size: 15px; margin-top: 6px; }
+
+/* Stats grid */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+.stat-card {
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 18px;
+    padding: 20px 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: transform 0.2s, background 0.2s;
+}
+.stat-card:hover { background: var(--card-hover); transform: translateY(-2px); }
+.stat-card .value { font-size: 34px; font-weight: 700; letter-spacing: -1px; }
+.stat-card .label { font-size: 13px; color: var(--secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.value.blue { color: var(--accent); }
+.value.green { color: var(--green); }
+.value.orange { color: var(--orange); }
+
+/* Panel */
+.panel {
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    padding: 28px;
+    margin-bottom: 24px;
+}
+.panel h2 {
+    font-size: 20px; font-weight: 600; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+}
+
+/* Replay */
+.replay-controls {
+    display: flex; gap: 12px; margin-bottom: 16px; align-items: center;
+}
+.btn {
+    padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500;
+    cursor: pointer; font-family: inherit; color: var(--text);
+    transition: all 0.15s;
+}
+.btn:hover { background: rgba(0,0,0,0.04); }
+.btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.replay-bar {
+    height: 6px; background: rgba(0,0,0,0.06); border-radius: 3px;
+    position: relative; overflow: hidden; flex: 1; margin: 0 8px;
+}
+.replay-progress {
+    height: 100%; background: var(--accent); border-radius: 3px;
+    transition: width 0.3s;
+}
+.replay-label { font-size: 12px; color: var(--secondary); min-width: 70px; text-align: center; }
+
+/* Hourly chart */
+.bars {
+    display: flex; align-items: flex-end; gap: 8px; height: 140px;
+    padding-top: 8px;
+}
+.bar {
+    flex: 1; background: var(--accent); border-radius: 6px 6px 0 0;
+    min-height: 4px; opacity: 0.8; transition: opacity 0.2s;
+    position: relative;
+}
+.bar:hover { opacity: 1; }
+.bar .tip {
+    position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: var(--secondary); white-space: nowrap;
+    opacity: 0; transition: opacity 0.2s;
+}
+.bar:hover .tip { opacity: 1; }
+.bar .hour {
+    position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: var(--secondary);
+}
+
+/* Altitude distribution */
+.alt-bars {
+    display: flex; gap: 12px; flex-wrap: wrap;
+}
+.alt-bar {
+    flex: 1; min-width: 90px; text-align: center;
+}
+.alt-bar .fill {
+    height: 80px; background: rgba(0,0,0,0.06); border-radius: 10px;
+    position: relative; overflow: hidden; margin-bottom: 8px;
+}
+.alt-bar .level {
+    position: absolute; bottom: 0; width: 100%;
+    background: linear-gradient(180deg, var(--accent), rgba(0,113,227,0.3));
+    border-radius: 10px 10px 0 0; transition: height 0.4s;
+}
+.alt-bar .num { font-size: 15px; font-weight: 600; }
+.alt-bar .range { font-size: 11px; color: var(--secondary); }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 12px 16px; font-size: 12px; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+td { padding: 11px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(0,0,0,0.02); }
+
+/* Daily totals */
+.daily-list {
+    display: flex; gap: 12px; flex-wrap: wrap;
+}
+.daily-item {
+    flex: 1; min-width: 100px; text-align: center;
+    background: rgba(0,0,0,0.02); border-radius: 12px; padding: 14px 10px;
+}
+.daily-item .num { font-size: 20px; font-weight: 700; }
+.daily-item .date { font-size: 11px; color: var(--secondary); margin-top: 4px; }
+
+footer {
+    text-align: center; color: var(--secondary); font-size: 12px;
+    margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+    body { padding: 20px 16px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 </head>
 <body>
-<h1>🛩 藁城上空 · 实时飞机追踪</h1>
-<p class="sub">数据来源 OpenSky Network · 每小时自动更新 · 范围 37.90°~38.15°N, 114.60°~115.05°E</p>
 
-<div class="cards">
-    <div class="card">
-        <div class="num">0</div>
-        <div class="label">当前空域飞机</div>
+<header>
+    <h1>SkyWatch</h1>
+    <p>藁城上空 · 实时飞行追踪 — 数据来源 OpenSky Network · 更新时间 2026-07-23T00:01:09.096078+08:00</p>
+</header>
+
+<!-- 统计卡片 -->
+<div class="stats">
+    <div class="stat-card">
+        <div class="value blue">0</div>
+        <div class="label">当前空域</div>
     </div>
-    <div class="card">
-        <div class="num">0</div>
+    <div class="stat-card">
+        <div class="value">0</div>
         <div class="label">今日累计观测</div>
     </div>
-    <div class="card">
-        <div class="num">0 m</div>
+    <div class="stat-card">
+        <div class="value green">0m</div>
         <div class="label">平均高度</div>
     </div>
-    <div class="card">
-        <div class="num">0</div>
+    <div class="stat-card">
+        <div class="value orange">0m</div>
+        <div class="label">最高飞行</div>
+    </div>
+    <div class="stat-card">
+        <div class="value">0m</div>
+        <div class="label">最低飞行</div>
+    </div>
+    <div class="stat-card">
+        <div class="value">0</div>
         <div class="label">地面停靠</div>
     </div>
 </div>
 
-<table>
-<tr>
-    <th>呼号</th><th>ICAO24</th><th>高度</th><th>速度</th><th>航向</th><th>位置</th>
-</tr>
-<tr><td colspan="6" style="text-align:center;padding:30px;">暂无数据，等待下一次采集...</td></tr>
-</table>
+<!-- 回放面板 -->
+<div class="panel">
+    <h2>⏯ 24小时回放</h2>
+    <div class="replay-controls">
+        <button class="btn" onclick="replayStart()">▶ 播放</button>
+        <button class="btn" onclick="replayPause()">⏸ 暂停</button>
+        <button class="btn" onclick="replayReset()">↺ 重置</button>
+        <div class="replay-bar"><div class="replay-progress" id="replayBar"></div></div>
+        <span class="replay-label" id="replayLabel">--</span>
+    </div>
+</div>
 
-<p class="footer">
-    更新时间：2026-07-22T22:02:12.815229+08:00 (UTC+8) · 
-    数据来源 <a href="https://opensky-network.org">OpenSky Network</a> · 
-    自动更新于 GitHub Actions
-</p>
+<!-- 今日每小时统计 -->
+<div class="panel">
+    <h2>📊 今日每小时观测量</h2>
+    <div class="bars">
+        <div class="bar" style="height:4px"><span class="tip">0</span><span class="hour">0时</span></div>
+    </div>
+</div>
+
+<!-- 高度分布 -->
+<div class="panel">
+    <h2>📐 今日高度分布</h2>
+    <div class="alt-bars">
+        <div class="alt-bar"><div class="fill"><div class="level" style="height:4px"></div></div><div class="num">0</div><div class="range">0-1000m</div></div><div class="alt-bar"><div class="fill"><div class="level" style="height:4px"></div></div><div class="num">0</div><div class="range">1000-3000m</div></div><div class="alt-bar"><div class="fill"><div class="level" style="height:4px"></div></div><div class="num">0</div><div class="range">3000-6000m</div></div><div class="alt-bar"><div class="fill"><div class="level" style="height:4px"></div></div><div class="num">0</div><div class="range">6000-9000m</div></div><div class="alt-bar"><div class="fill"><div class="level" style="height:4px"></div></div><div class="num">0</div><div class="range">9000m+</div></div>
+    </div>
+</div>
+
+<!-- 每日总量 -->
+<div class="panel">
+    <h2>📅 每日飞行总量</h2>
+    <div class="daily-list">
+        <div class="daily-item"><div class="num">0</div><div class="date">07-22</div></div><div class="daily-item"><div class="num">0</div><div class="date">07-23</div></div>
+    </div>
+</div>
+
+<!-- 当前飞机列表 -->
+<div class="panel">
+    <h2>🛩 当前空域 (0 架)</h2>
+    <table>
+    <tr><th>呼号</th><th>高度</th><th>速度</th><th>航向</th><th>位置</th></tr>
+    <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--secondary)">暂无数据，等待采集…</td></tr>
+    </table>
+</div>
+
+<footer>
+    SkyWatch · 藁城上空飞行追踪 · 数据来源 OpenSky Network · 每小时自动更新 · Powered by GitHub Actions
+</footer>
+
+<script>
+const replayData = [{"time": "07-22 22:02", "count": 0}, {"time": "07-23 00:01", "count": 0}];
+let replayIdx = 0;
+let replayTimer = null;
+
+function updateReplay() {
+    if (replayIdx >= replayData.length) { replayPause(); return; }
+    const d = replayData[replayIdx];
+    document.getElementById('replayBar').style.width = ((replayIdx+1)/replayData.length*100) + '%';
+    document.getElementById('replayLabel').textContent = d.time + ' · ' + d.count + '架';
+    replayIdx++;
+}
+
+function replayStart() { replayPause(); replayTimer = setInterval(updateReplay, 300); }
+function replayPause() { clearInterval(replayTimer); }
+function replayReset() { replayPause(); replayIdx = 0; document.getElementById('replayBar').style.width = '0'; document.getElementById('replayLabel').textContent = '--'; }
+</script>
+
 </body>
 </html>
