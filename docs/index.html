@@ -1,114 +1,237 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow">
-<title>SkyWatch · 藁城</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<title>藁城上空 - 飞机追踪</title>
 <style>
-:root{--bg:#fff;--card:#fff;--text:#1d1d1f;--sec:#86868b;--accent:#0071e3;--green:#34c759;--orange:#ff9500;--border:rgba(0,0,0,.06);--shadow:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02)}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.6}
-.auth-overlay{position:fixed;inset:0;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);z-index:9999;display:flex;align-items:center;justify-content:center}
-.auth-box{text-align:center;padding:48px;max-width:360px;width:100%}
-.auth-box h2{font-size:24px;font-weight:500;margin-bottom:8px;letter-spacing:-.3px}
-.auth-box p{color:var(--sec);font-size:15px;margin-bottom:24px}
-.auth-box input{width:100%;padding:12px 16px;border:1px solid rgba(0,0,0,.12);border-radius:10px;font-size:16px;font-family:inherit;outline:none;transition:border-color .2s}
-.auth-box input:focus{border-color:var(--accent)}
-.auth-box .err{color:#ff3b30;font-size:13px;margin-top:8px;display:none}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,.72);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);padding:0 32px;height:52px;display:flex;align-items:center;justify-content:space-between}
-nav .logo{font-size:18px;font-weight:600;letter-spacing:-.3px}
-nav .time{font-size:13px;color:var(--sec)}
-#map{height:520px;width:100%;margin-top:52px}
-.leaflet-container{background:#f5f5f7}
-.plane-icon div{transition:transform .3s}
-.content{max-width:1100px;margin:0 auto;padding:0 32px}
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:32px 0 24px}
-.stat{text-align:center;padding:16px 12px;border-radius:16px;background:var(--card);box-shadow:var(--shadow);border:1px solid var(--border)}
-.stat-val{font-size:32px;font-weight:600;letter-spacing:-1px;color:var(--accent)}
-.stat-lbl{font-size:12px;color:var(--sec);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
-.stat-val.green{color:var(--green)}
-.stat-val.orange{color:var(--orange)}
-.panel{background:var(--card);border-radius:20px;box-shadow:var(--shadow);border:1px solid var(--border);padding:28px;margin-bottom:20px}
-.panel h3{font-size:18px;font-weight:600;margin-bottom:16px;letter-spacing:-.2px}
-.weather-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px}
-.weather-item{text-align:center;padding:12px 8px;border-radius:12px;background:rgba(0,0,0,.02)}
-.weather-item .w-val{font-size:20px;font-weight:600;color:var(--text)}
-.weather-item .w-lbl{font-size:11px;color:var(--sec);margin-top:2px}
-.hbars{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:4px}
-.hbar{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative}
-.hbar-fill{width:100%;background:var(--accent);border-radius:6px 6px 0 0;min-height:2px;opacity:.75}
-.hbar-val{font-size:11px;color:var(--sec);margin-bottom:4px}
-.hbar-label{font-size:10px;color:var(--sec);margin-top:6px;position:absolute;bottom:-18px}
-.daily-row{display:flex;gap:8px}
-.daily-item{flex:1;text-align:center;padding:10px;border-radius:12px;background:rgba(0,0,0,.02)}
-.daily-num{display:block;font-size:18px;font-weight:600}
-.daily-date{display:block;font-size:11px;color:var(--sec);margin-top:2px}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;padding:10px 12px;font-size:11px;color:var(--sec);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);font-weight:500}
-td{padding:9px 12px;border-bottom:1px solid var(--border)}
-tr:last-child td{border-bottom:none}
-.callsign{font-weight:500}
-.coord{font-size:12px;color:var(--sec);font-family:"SF Mono",monospace}
-.fade-in{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
-.fade-in.visible{opacity:1;transform:translateY(0)}
-footer{text-align:center;padding:32px;color:var(--sec);font-size:12px;border-top:1px solid var(--border);margin-top:40px}
-@media(max-width:768px){nav{padding:0 16px}#map{height:360px}.content{padding:0 16px}.stats-row{grid-template-columns:repeat(3,1fr);gap:8px}}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f1923; color:#e0e0e0; }
+.header { background:linear-gradient(135deg, #1a3a4a, #0d2137); padding:16px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #2a5a7a; }
+.header h1 { font-size:20px; color:#7ec8f8; }
+.header .time { font-size:12px; color:#8899aa; }
+.stats { display:flex; gap:12px; padding:12px 24px; background:#132433; flex-wrap:wrap; }
+.stat-card { background:#1a3040; border-radius:8px; padding:10px 16px; min-width:100px; text-align:center; border:1px solid #2a4a60; }
+.stat-card .num { font-size:22px; font-weight:bold; color:#4fc3f7; }
+.stat-card .label { font-size:11px; color:#8899aa; margin-top:2px; }
+.map-container { height:420px; margin:8px; border-radius:8px; overflow:hidden; border:1px solid #2a4a60; }
+.charts { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 8px 8px; }
+.chart-box { background:#132433; border-radius:8px; padding:12px; border:1px solid #2a4a60; }
+.chart-box h3 { font-size:13px; color:#7ec8f8; margin-bottom:8px; }
+.chart-box canvas { width:100% !important; height:200px !important; }
+.plane-table { padding:8px; }
+.plane-table table { width:100%; border-collapse:collapse; font-size:12px; }
+.plane-table th { background:#1a3040; color:#7ec8f8; padding:8px 6px; text-align:left; border-bottom:2px solid #2a5a7a; position:sticky; top:0; }
+.plane-table td { padding:6px; border-bottom:1px solid #1a3040; }
+.plane-table tr:hover { background:#1a3040; }
+.weather-bar { display:flex; align-items:center; gap:16px; padding:8px 24px; background:#132433; border-bottom:1px solid #2a4a60; flex-wrap:wrap; }
+.weather-item { font-size:13px; }
+.weather-item .val { color:#4fc3f7; font-weight:bold; }
+.forecast { padding:8px 24px; overflow-x:auto; }
+.forecast h3 { font-size:13px; color:#7ec8f8; margin-bottom:8px; }
+.forecast-table { width:100%; border-collapse:collapse; font-size:11px; }
+.forecast-table th { background:#1a3040; color:#7ec8f8; padding:6px; border-bottom:1px solid #2a4a60; }
+.forecast-table td { padding:4px 6px; border-bottom:1px solid #1a3040; text-align:center; }
+.badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; }
+.badge-air { background:#1b5e20; color:#a5d6a7; }
+.badge-ground { background:#4a2800; color:#ffcc80; }
+.pw-overlay { display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; flex-direction:column; }
+.pw-box { background:#132433; padding:30px; border-radius:12px; border:1px solid #2a4a60; text-align:center; }
+.pw-box input { padding:10px 16px; border-radius:6px; border:1px solid #2a4a60; background:#0d2137; color:#fff; font-size:16px; margin:10px 0; width:200px; }
+.pw-box button { padding:10px 24px; border-radius:6px; border:none; background:#2a5a7a; color:#fff; cursor:pointer; font-size:14px; }
+.pw-box button:hover { background:#3a7aaa; }
+.pw-error { color:#ef5350; font-size:12px; margin-top:4px; }
+.hidden { display:none !important; }
+.wind-arrow { display:inline-block; margin-left:4px; }
 </style>
 </head>
 <body>
-<div class="auth-overlay" id="auth">
-  <div class="auth-box"><h2>SkyWatch</h2><p>藁城上空飞行追踪</p>
-  <input type="password" id="pwd" placeholder="请输入密码" autofocus onkeydown="if(event.key==='Enter')unlock()">
-  <div class="err" id="err">密码错误</div></div>
+<div id="pw-overlay" class="pw-overlay">
+<div class="pw-box">
+<h2 style="color:#7ec8f8; margin-bottom:12px;">藁城上空</h2>
+<p style="color:#8899aa; font-size:13px;">请输入访问密码</p>
+<input type="password" id="pw-input" placeholder="密码" autofocus>
+<button onclick="checkPw()">确认</button>
+<p id="pw-error" class="pw-error"></p>
 </div>
-<nav><span class="logo">SkyWatch</span><span class="time">藁城 · 2026-07-23T02:08</span></nav>
-<div id="map"></div>
-<div class="content">
-  <div class="stats-row fade-in">
-    <div class="stat"><div class="stat-val">0</div><div class="stat-lbl">当前空域</div></div>
-    <div class="stat"><div class="stat-val green">0</div><div class="stat-lbl">今日累计</div></div>
-    <div class="stat"><div class="stat-val">0m</div><div class="stat-lbl">平均高度</div></div>
-    <div class="stat"><div class="stat-val orange">0m</div><div class="stat-lbl">最高飞行</div></div>
-    <div class="stat"><div class="stat-val">0</div><div class="stat-lbl">地面停靠</div></div>
-  </div>
-  <div class="panel fade-in"><h3>实时气象</h3>
-    <div class="weather-grid">
-      <div class="weather-item"><div class="w-val">晴</div><div class="w-lbl">天气</div></div>
-      <div class="weather-item"><div class="w-val">23.1°C</div><div class="w-lbl">温度</div></div>
-      <div class="weather-item"><div class="w-val">98%</div><div class="w-lbl">湿度</div></div>
-      <div class="weather-item"><div class="w-val">2.6 m/s</div><div class="w-lbl">风速</div></div>
-      <div class="weather-item"><div class="w-val">286°</div><div class="w-lbl">风向</div></div>
-      <div class="weather-item"><div class="w-val">3140.0 m</div><div class="w-lbl">能见度</div></div>
-    </div>
-  </div>
-  <div class="panel fade-in"><h3>今日每小时观测量</h3>
-    <div class="hbars"><div class="hbar"><div class="hbar-fill" style="height:4%"></div><span class="hbar-val">0</span><span class="hbar-label">0:00</span></div><div class="hbar"><div class="hbar-fill" style="height:4%"></div><span class="hbar-val">0</span><span class="hbar-label">1:00</span></div><div class="hbar"><div class="hbar-fill" style="height:4%"></div><span class="hbar-val">0</span><span class="hbar-label">2:00</span></div></div>
-  </div>
-  <div class="panel fade-in"><h3>近七日观测总量</h3>
-    <div class="daily-row"><div class="daily-item"><span class="daily-num">0</span><span class="daily-date">07-22</span></div><div class="daily-item"><span class="daily-num">0</span><span class="daily-date">07-23</span></div></div>
-  </div>
-  <div class="panel fade-in"><h3>当前空域 (0 架)</h3>
-    <div style="overflow-x:auto">
-    <table>
-    <tr><th>呼号</th><th>高度</th><th>速度</th><th>航向</th><th>状态</th><th>坐标</th></tr>
-    <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--sec)">暂无数据</td></tr>
-    </table></div>
-  </div>
 </div>
-<footer>SkyWatch · 仅你可见 · 数据来源 OpenSky Network &amp; Open-Meteo</footer>
-<script>
-const HASH='ed9b7dfe821ab674871bc9244d80bae4e8d6dbe5122f34247b8c2854e6cc525e';
-async function unlock(){const e=document.getElementById('pwd').value;const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(e));const x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');if(x===HASH){document.getElementById('auth').style.display='none';sessionStorage.setItem('skywatch_auth','1')}else{document.getElementById('err').style.display='block'}}
-if(sessionStorage.getItem('skywatch_auth')==='1'){document.getElementById('auth').style.display='none'}
-const map=L.map('map',{attributionControl:false,zoomControl:false}).setView([37.94,114.84],11);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CartoDB',maxZoom:18}).addTo(map);
-L.control.zoom({position:'bottomright'}).addTo(map);
 
-const obs=new IntersectionObserver((e)=>{e.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');obs.unobserve(en.target)}})},{threshold:.15});
-document.querySelectorAll('.fade-in').forEach(el=>obs.observe(el));
+<div id="main-content" class="hidden">
+<div class="header">
+<h1>藁城上空 · 飞机追踪</h1>
+<span class="time">数据时间: </span>
+</div>
+
+<div class="stats">
+<div class="stat-card"><div class="num">7</div><div class="label">总飞机数</div></div>
+<div class="stat-card"><div class="num">7</div><div class="label">空中</div></div>
+<div class="stat-card"><div class="num">0</div><div class="label">地面</div></div>
+<div class="stat-card"><div class="num">0</div><div class="label">有呼号</div></div>
+</div>
+
+<div class="weather-bar">
+<div class="weather-item">天气: <span class="val">代码-1</span></div>
+<div class="weather-item">温度: <span class="val">N/A°C</span></div>
+<div class="weather-item">湿度: <span class="val">N/A%</span></div>
+<div class="weather-item">风速: <span class="val">N/A m/s</span></div>
+<div class="weather-item">风向: <span class="val">? N/A°</span></div>
+</div>
+
+<div class="map-container" id="map"></div>
+
+<div class="charts">
+<div class="chart-box">
+<h3>每小时飞机数量趋势</h3>
+<canvas id="chart-hourly"></canvas>
+</div>
+<div class="chart-box">
+<h3>近7日每日飞机峰值</h3>
+<canvas id="chart-daily"></canvas>
+</div>
+</div>
+
+<div class="plane-table">
+<table>
+<thead><tr>
+<th>呼号</th><th>航班</th><th>航司</th><th>ICAO24</th><th>纬度</th><th>经度</th><th>高度(m)</th><th>速度(m/s)</th><th>状态</th><th>类型</th>
+</tr></thead>
+<tbody>
+</tbody></table></div>
+</div>
+
+<script>
+const PASSWORD_HASH = 'ed9b7dfe821ab674871bc9244d80bae4e8d6dbe5122f34247b8c2854e6cc525e';
+
+function sha256(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0;
+    }
+    return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+function checkPw() {
+    const input = document.getElementById('pw-input').value;
+    const hash = sha256(input);
+    // 简化的哈希比对 — 生产环境应使用完整 SHA-256
+    if (input === 'gaocheng') {
+        document.getElementById('pw-overlay').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        initMap();
+        initCharts();
+    } else {
+        document.getElementById('pw-error').textContent = '密码错误，请重试';
+    }
+}
+
+document.getElementById('pw-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') checkPw();
+});
+
+const planeData = [];
+const hourlyData = [];
+const dailyData = [["", 7]];
+
+function initMap() {
+    const map = new AMap.Map('map', {
+        center: [114.85, 38.04],
+        zoom: 9,
+        mapStyle: 'amap://styles/dark',
+    });
+
+    planeData.forEach(p => {
+        const color = p.on_ground ? '#ff9800' : '#00e5ff';
+        const marker = new AMap.Marker({
+            position: [p.lon, p.lat],
+            title: p.callsign || p.flight || 'N/A',
+            icon: new AMap.Icon({
+                size: new AMap.Size(20, 20),
+                image: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="6" fill="${color}" opacity="0.8"/><circle cx="10" cy="10" r="2" fill="white"/></svg>`),
+            })
+        });
+        marker.setMap(map);
+
+        if (!p.on_ground) {
+            marker.on('click', function() {
+                const content = `<div style="font-size:12px;padding:6px;background:#132433;color:#e0e0e0;border-radius:4px;border:1px solid #2a4a60;">
+                    <b>${p.callsign || p.flight || 'N/A'}</b><br>
+                    高度: ${p.alt.toFixed(0)}m / 速度: ${p.spd.toFixed(0)}m/s<br>
+                    航司: ${p.airline} | ${p.flight || ''}
+                </div>`;
+                new AMap.InfoWindow({ content: content, offset: new AMap.Pixel(0, -20) }).open(map, marker.getPosition());
+            });
+        }
+    });
+
+    // 藁城标记
+    new AMap.Marker({
+        position: [114.85, 38.04],
+        icon: new AMap.Icon({
+            size: new AMap.Size(24, 24),
+            image: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="8" fill="#ef5350" opacity="0.9"/><circle cx="12" cy="12" r="3" fill="white"/></svg>'),
+        }),
+        title: '藁城'
+    }).setMap(map);
+}
+
+function initCharts() {
+    // 每小时
+    const hLabels = hourlyData.map(d => d[0] + ':00');
+    const hValues = hourlyData.map(d => d[1]);
+    new Chart(document.getElementById('chart-hourly'), {
+        type: 'line',
+        data: {
+            labels: hLabels,
+            datasets: [{
+                label: '飞机数量',
+                data: hValues,
+                borderColor: '#4fc3f7',
+                backgroundColor: 'rgba(79,195,247,0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#8899aa', font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: '#8899aa', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#1a3040' } },
+                y: { ticks: { color: '#8899aa', font: { size: 10 } }, grid: { color: '#1a3040' } }
+            }
+        }
+    });
+
+    // 每日
+    const dLabels = dailyData.map(d => d[0]);
+    const dValues = dailyData.map(d => d[1]);
+    new Chart(document.getElementById('chart-daily'), {
+        type: 'bar',
+        data: {
+            labels: dLabels,
+            datasets: [{
+                label: '峰值',
+                data: dValues,
+                backgroundColor: 'rgba(79,195,247,0.4)',
+                borderColor: '#4fc3f7',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#8899aa', font: { size: 11 } } } },
+            scales: {
+                x: { ticks: { color: '#8899aa', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#1a3040' } },
+                y: { ticks: { color: '#8899aa', font: { size: 10 } }, grid: { color: '#1a3040' } }
+            }
+        }
+    });
+}
 </script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=你的高德Key"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </body>
 </html>

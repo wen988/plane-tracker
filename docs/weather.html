@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>藁城气象仪表盘</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f1923; color:#e0e0e0; }
+.header { background:linear-gradient(135deg, #1a3a4a, #0d2137); padding:16px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #2a5a7a; }
+.header h1 { font-size:20px; color:#7ec8f8; }
+.header .time { font-size:12px; color:#8899aa; }
+.current { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; padding:16px 24px; }
+.cur-card { background:#132433; border-radius:8px; padding:12px; text-align:center; border:1px solid #2a4a60; }
+.cur-card .val { font-size:24px; font-weight:bold; color:#4fc3f7; }
+.cur-card .label { font-size:11px; color:#8899aa; margin-top:4px; }
+.charts { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 24px 24px; }
+.chart-box { background:#132433; border-radius:8px; padding:12px; border:1px solid #2a4a60; }
+.chart-box h3 { font-size:13px; color:#7ec8f8; margin-bottom:8px; }
+.chart-box canvas { width:100% !important; height:220px !important; }
+@media (max-width:768px) { .current { grid-template-columns:repeat(3,1fr); } .charts { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="header">
+<h1>藁城 · 气象仪表盘</h1>
+<span class="time">数据时间: </span>
+</div>
+
+<div class="current">
+<div class="cur-card"><div class="val">代码-1</div><div class="label">天气状况</div></div>
+<div class="cur-card"><div class="val">N/A°C</div><div class="label">气温</div></div>
+<div class="cur-card"><div class="val">N/A%</div><div class="label">相对湿度</div></div>
+<div class="cur-card"><div class="val">N/A m/s ?</div><div class="label">风速/风向</div></div>
+<div class="cur-card"><div class="val">0条</div><div class="label">预报数据</div></div>
+</div>
+
+<div class="charts">
+<div class="chart-box">
+<h3>48小时温度变化</h3>
+<canvas id="chart-temp"></canvas>
+</div>
+<div class="chart-box">
+<h3>48小时湿度变化</h3>
+<canvas id="chart-hum"></canvas>
+</div>
+<div class="chart-box">
+<h3>48小时风速</h3>
+<canvas id="chart-wind"></canvas>
+</div>
+<div class="chart-box">
+<h3>48小时降水概率</h3>
+<canvas id="chart-precip"></canvas>
+</div>
+<div class="chart-box">
+<h3>48小时云量</h3>
+<canvas id="chart-cloud"></canvas>
+</div>
+<div class="chart-box">
+<h3>近7日温度范围</h3>
+<canvas id="chart-range"></canvas>
+</div>
+</div>
+
+<script>
+const tempLabels = [];
+const tempVals = [];
+const humVals = [];
+const windVals = [];
+const precipVals = [];
+const cloudVals = [];
+const dailyLabels = [];
+const dailyMax = [];
+const dailyMin = [];
+
+const chartOpts = {{
+    responsive: true, maintainAspectRatio: false,
+    plugins: {{ legend: {{ labels: {{ color: '#8899aa', font: {{ size: 10 }} }} }} }},
+    scales: {{
+        x: {{ ticks: {{ color: '#8899aa', font: {{ size: 9 }}, maxRotation: 45, maxTicksLimit: 12 }}, grid: {{ color: '#1a3040' }} }},
+        y: {{ ticks: {{ color: '#8899aa', font: {{ size: 9 }} }}, grid: {{ color: '#1a3040' }} }}
+    }}
+}};
+
+new Chart(document.getElementById('chart-temp'), {{
+    type: 'line', data: {{ labels: tempLabels, datasets: [{{ label: '温度(°C)', data: tempVals, borderColor: '#ef5350', backgroundColor: 'rgba(239,83,80,0.1)', fill: true, tension: 0.3 }}] }}, options: chartOpts
+}});
+new Chart(document.getElementById('chart-hum'), {{
+    type: 'line', data: {{ labels: tempLabels, datasets: [{{ label: '湿度(%)', data: humVals, borderColor: '#42a5f5', backgroundColor: 'rgba(66,165,245,0.1)', fill: true, tension: 0.3 }}] }}, options: chartOpts
+}});
+new Chart(document.getElementById('chart-wind'), {{
+    type: 'bar', data: {{ labels: tempLabels, datasets: [{{ label: '风速(m/s)', data: windVals, backgroundColor: 'rgba(129,212,250,0.4)', borderColor: '#81d4fa', borderWidth: 1 }}] }}, options: chartOpts
+}});
+new Chart(document.getElementById('chart-precip'), {{
+    type: 'bar', data: {{ labels: tempLabels, datasets: [{{ label: '降水概率(%)', data: precipVals, backgroundColor: 'rgba(79,195,247,0.3)', borderColor: '#4fc3f7', borderWidth: 1 }}] }}, options: chartOpts
+}});
+new Chart(document.getElementById('chart-cloud'), {{
+    type: 'line', data: {{ labels: tempLabels, datasets: [{{ label: '云量(%)', data: cloudVals, borderColor: '#b0bec5', backgroundColor: 'rgba(176,190,197,0.1)', fill: true, tension: 0.3 }}] }}, options: chartOpts
+}});
+new Chart(document.getElementById('chart-range'), {{
+    type: 'bar', data: {{
+        labels: dailyLabels,
+        datasets: [
+            {{ label: '最高(°C)', data: dailyMax, backgroundColor: 'rgba(239,83,80,0.5)', borderColor: '#ef5350', borderWidth: 1 }},
+            {{ label: '最低(°C)', data: dailyMin, backgroundColor: 'rgba(66,165,245,0.5)', borderColor: '#42a5f5', borderWidth: 1 }}
+        ]
+    }}, options: chartOpts
+}});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</body>
+</html>
