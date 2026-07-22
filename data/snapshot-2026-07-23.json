@@ -42,5 +42,24 @@
       "lomax": 115.05
     },
     "planes": []
+  },
+  {
+    "timestamp": "2026-07-23T02:06:24.063324+08:00",
+    "count": 0,
+    "bbox": {
+      "lamin": 37.9,
+      "lamax": 38.15,
+      "lomin": 114.6,
+      "lomax": 115.05
+    },
+    "planes": [],
+    "weather": {
+      "temperature": 23.1,
+      "humidity": 98,
+      "wind_speed": 2.6,
+      "wind_direction": 286,
+      "weather_code": 0,
+      "visibility": 3140.0
+    }
   }
 ]
