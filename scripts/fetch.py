@@ -19,6 +19,12 @@ LOMIN = 114.60  # 西
 LOMAX = 115.05  # 东
 
 API_URL = "https://opensky-network.org/api/states/all"
+WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
+WEATHER_PARAMS = {
+    "latitude": 37.97,
+    "longitude": 114.85,
+    "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,visibility",
+}
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -44,18 +50,37 @@ def fetch_states() -> list[dict]:
     result = []
     for s in states:
         result.append({
-            "icao24":      s[0],                         # ICAO24 识别码
-            "callsign":    (s[1] or "").strip(),          # 呼号
-            "origin":      s[2] or "",                    # 始发国
-            "longitude":   s[5],                          # 经度
-            "latitude":    s[6],                          # 纬度
-            "altitude":    s[7],                          # 气压高度(m)
-            "on_ground":   s[8],                          # 是否在地面
-            "velocity":    s[9],                          # 速度(m/s)
-            "heading":     s[10],                         # 航向(度)
-            "vertical":    s[11],                         # 垂直速率(m/s)
+            "icao24":      s[0],
+            "callsign":    (s[1] or "").strip(),
+            "origin":      s[2] or "",
+            "longitude":   s[5],
+            "latitude":    s[6],
+            "altitude":    s[7],
+            "on_ground":   s[8],
+            "velocity":    s[9],
+            "heading":     s[10],
+            "vertical":    s[11],
         })
     return result
+
+
+def fetch_weather() -> dict:
+    """抓取藁城区实时天气（Open-Meteo，免费无限调用）"""
+    try:
+        r = requests.get(WEATHER_URL, params=WEATHER_PARAMS, timeout=10)
+        r.raise_for_status()
+        c = r.json().get("current", {})
+        return {
+            "temperature": c.get("temperature_2m"),
+            "humidity": c.get("relative_humidity_2m"),
+            "wind_speed": c.get("wind_speed_10m"),
+            "wind_direction": c.get("wind_direction_10m"),
+            "weather_code": c.get("weather_code"),
+            "visibility": c.get("visibility"),
+        }
+    except Exception as e:
+        print(f"Weather fetch failed: {e}")
+        return {}
 
 
 def main():
@@ -66,15 +91,18 @@ def main():
         print(f"Fetch failed: {e}")
         planes = []
 
+    print("Fetching weather...")
+    weather = fetch_weather()
+
     timestamp = datetime.now(tz).isoformat()
     record = {
         "timestamp": timestamp,
         "count": len(planes),
         "bbox": {"lamin": LAMIN, "lamax": LAMAX, "lomin": LOMIN, "lomax": LOMAX},
         "planes": planes,
+        "weather": weather,
     }
 
-    # 保存当天快照
     date_str = datetime.now(tz).strftime("%Y-%m-%d")
     snap_file = DATA_DIR / f"snapshot-{date_str}.json"
 
@@ -88,7 +116,6 @@ def main():
     existing.append(record)
     snap_file.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 保留最近30天
     all_snaps = sorted(DATA_DIR.glob("snapshot-*.json"))
     if len(all_snaps) > 30:
         for old in all_snaps[:-30]:
