@@ -1,567 +1,276 @@
 #!/usr/bin/env python3
-"""生成藁城上空飞机追踪面板 + 气象仪表盘"""
+"""藁城上空 - 飞机追踪 + 气象仪表盘"""
 
-import json, os, glob, hashlib, datetime
+import json, os, glob, hashlib
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "docs")
-PASSWORD_HASH = hashlib.sha256("gaocheng".encode()).hexdigest()
+PW_HASH = hashlib.sha256("gaocheng".encode()).hexdigest()
 
-WEATHER_CN = {
-    0: "☀️ 晴", 1: "🌤 少云", 2: "⛅ 多云", 3: "☁️ 阴",
-    45: "🌫 雾", 48: "🌫 雾凇",
-    51: "🌦 小毛毛雨", 53: "🌦 中毛毛雨", 55: "🌦 大毛毛雨",
-    61: "🌧 小雨", 63: "🌧 中雨", 65: "🌧 大雨",
-    71: "❄️ 小雪", 73: "❄️ 中雪", 75: "❄️ 大雪",
-    80: "🌦 阵雨", 81: "🌦 中阵雨", 82: "🌦 大阵雨",
-    95: "⛈ 雷暴", 96: "⛈ 冰雹雷暴", 99: "⛈ 大冰雹雷暴"
-}
+WX_CN = {0:"晴",1:"少云",2:"多云",3:"阴",45:"雾",48:"雾凇",51:"小毛毛雨",53:"中毛毛雨",55:"大毛毛雨",61:"小雨",63:"中雨",65:"大雨",71:"小雪",73:"中雪",75:"大雪",80:"阵雨",81:"中阵雨",82:"大阵雨",95:"雷暴",96:"冰雹雷暴",99:"大冰雹雷暴"}
 
 def load_latest():
-    """加载最新数据，兼容旧 list 格式和新 dict 格式"""
     files = sorted(glob.glob(os.path.join(DATA_DIR, "*.json")), reverse=True)
-    if not files:
-        return {}
+    if not files: return {}
     with open(files[0], encoding="utf-8") as f:
         d = json.load(f)
-    if isinstance(d, list):
-        return {"planes": d, "weather": {}, "forecast": {"hourly": []}, "timestamp": ""}
-    return d
+    return {"planes":d,"weather":{},"forecast":{"hourly":[]},"timestamp":""} if isinstance(d,list) else d
 
 def load_history():
-    """加载历史数据（近7天），兼容两种格式"""
     files = sorted(glob.glob(os.path.join(DATA_DIR, "*.json")), reverse=True)[:168]
-    records = []
+    recs = []
     for f in files:
         try:
-            with open(f, encoding="utf-8") as fp:
-                d = json.load(fp)
-            if isinstance(d, list):
-                records.append({"planes": d, "weather": {}, "forecast": {"hourly": []}, "timestamp": ""})
-            else:
-                records.append(d)
-        except:
-            pass
-    return records
+            with open(f, encoding="utf-8") as fp: d = json.load(fp)
+            recs.append({"planes":d,"weather":{},"forecast":{"hourly":[]},"timestamp":""} if isinstance(d,list) else d)
+        except: pass
+    return recs
 
-def generate_index_html(data, records):
-    """飞机追踪面板 - 高德地图 + 中文"""
+def make_index(data, records):
     planes = data.get("planes", [])
-    weather = data.get("weather", {})
     ts = data.get("timestamp", "")
+    weather = data.get("weather", {})
+    if isinstance(weather, dict) and "current" in weather:
+        wc = weather["current"]
+    else:
+        wc = weather if isinstance(weather, dict) else {}
+    wx_temp = wc.get("temperature_2m", "--")
+    wx_hum = wc.get("relative_humidity_2m", "--")
+    wx_wind = wc.get("wind_speed_10m", "--")
+    wx_code = wc.get("weather_code", -1)
+    wx_text = WX_CN.get(wx_code, "--")
 
-    # 统计数据
     total = len(planes)
     on_ground = sum(1 for p in planes if p.get("on_ground"))
     in_air = total - on_ground
-    callsigns = [p for p in planes if p.get("callsign", "").strip()]
+    cs_count = sum(1 for p in planes if p.get("callsign","").strip())
 
-    # 每小时统计
     hourly = {}
     for r in records:
-        t = r.get("timestamp", "")
-        if t:
-            hour = t[11:13]
-            hourly[hour] = hourly.get(hour, 0) + len(r.get("planes", []))
-    hourly_sorted = sorted(hourly.items())
+        t = r.get("timestamp","")
+        if t: hourly[t[11:13]] = hourly.get(t[11:13],0) + len(r.get("planes",[]))
+    hs = sorted(hourly.items())
+    hmax = max([v for _,v in hs], default=1)
 
-    # 近7日
     daily = {}
     for r in records:
-        d = r.get("timestamp", "")[:10]
-        daily[d] = max(daily.get(d, 0), len(r.get("planes", [])))
-    daily_sorted = sorted(daily.items())[-7:]
+        d = r.get("timestamp","")[:10]
+        daily[d] = max(daily.get(d,0), len(r.get("planes",[])))
+    ds = sorted(daily.items())[-7:]
+    dmax = max([v for _,v in ds], default=1)
 
-    # 飞机标记 JS
-    plane_js = []
+    # plane markers JS
+    pjs = []
     for p in planes:
-        lat = p.get("latitude")
-        lon = p.get("longitude")
-        if lat and lon:
-            alt = p.get("altitude_baro", p.get("altitude", 0)) or 0
-            if isinstance(alt, str):
-                try: alt = float(alt)
-                except: alt = 0
-            spd = p.get("velocity", p.get("ground_speed", 0)) or 0
-            if isinstance(spd, str):
-                try: spd = float(spd)
-                except: spd = 0
-            cs = p.get("callsign", "").strip()
-            air = p.get("airline", "").strip() or cs[:3] if cs else "?"
-            fl = p.get("flight", "").strip().replace(" ", "")
-            icao = p.get("icao24", "").strip()
-            ong = p.get("on_ground", False)
-            cat = p.get("category", "")
-            plane_js.append({
-                "lat": lat, "lon": lon, "alt": alt, "spd": spd,
-                "callsign": cs, "airline": air, "flight": fl,
-                "icao": icao, "on_ground": ong, "category": cat
-            })
+        lat, lon = p.get("latitude"), p.get("longitude")
+        if not lat or not lon: continue
+        alt = p.get("baro_altitude") or p.get("geo_altitude") or 0
+        vel = p.get("velocity") or 0
+        trk = p.get("true_track") or 0
+        cs = p.get("callsign","").strip() or "N/A"
+        icao = p.get("icao24","").strip()
+        og = p.get("on_ground", False)
+        pjs.append({"lat":lat,"lon":lon,"alt":alt,"vel":vel,"trk":trk,"cs":cs,"icao":icao,"og":og})
 
-    # 气象信息
-    wx = weather.get("current", {})
-    wx_temp = wx.get("temperature_2m", "N/A")
-    wx_hum = wx.get("relative_humidity_2m", "N/A")
-    wx_wind = wx.get("wind_speed_10m", "N/A")
-    wx_dir = wx.get("wind_direction_10m", "N/A")
-    wx_code = wx.get("weather_code", -1)
-    wx_desc = WEATHER_CN.get(wx_code, f"代码{wx_code}")
+    # table rows
+    rows = ""
+    for p in planes:
+        cs = p.get("callsign","").strip() or "-"
+        icao = p.get("icao24","").strip()
+        alt = p.get("baro_altitude") or p.get("geo_altitude") or 0
+        vel = p.get("velocity") or 0
+        trk = p.get("true_track") or 0
+        og = "地面" if p.get("on_ground") else "空中"
+        rows += f'<tr><td>{cs}</td><td>{icao}</td><td>{alt:.0f}</td><td>{vel:.0f}</td><td>{trk:.0f}°</td><td>{og}</td></tr>'
 
-    # 预报
-    fc = data.get("forecast", {})
-    fc_hourly = fc.get("hourly", [])
+    # hourly bars
+    hbars, hlabels = "", ""
+    for h, v in hs:
+        pct = v/hmax*100
+        hbars += f'<div class="bar" style="height:{pct}%"><span class="tip">{h}时: {v}架</span></div>'
+        hlabels += f"<span>{h}</span>"
+    # daily bars
+    dbars, dlabels = "", ""
+    for d, v in ds:
+        pct = v/dmax*100
+        dbars += f'<div class="bar" style="height:{pct}%"><span class="tip">{d}: {v}架</span></div>'
+        dlabels += f"<span>{d[5:]}</span>"
 
-    # 风向箭头
-    def wind_arrow(deg):
-        try:
-            d = float(deg)
-            dirs = ["↓北", "↙", "←西", "↖", "↑南", "↗", "→东", "↘"]
-            return dirs[round(d / 45) % 8]
-        except:
-            return "?"
-
-    html = f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="referrer" content="no-referrer">
-<title>藁城上空 - 飞机追踪</title>
+    html = f'''<!DOCTYPE html><html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="robots" content="noindex">
+<title>藁城上空 · 飞机追踪</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f1923; color:#e0e0e0; }}
-.header {{ background:linear-gradient(135deg, #1a3a4a, #0d2137); padding:16px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #2a5a7a; }}
-.header h1 {{ font-size:20px; color:#7ec8f8; }}
-.header .time {{ font-size:12px; color:#8899aa; }}
-.stats {{ display:flex; gap:12px; padding:12px 24px; background:#132433; flex-wrap:wrap; }}
-.stat-card {{ background:#1a3040; border-radius:8px; padding:10px 16px; min-width:100px; text-align:center; border:1px solid #2a4a60; }}
-.stat-card .num {{ font-size:22px; font-weight:bold; color:#4fc3f7; }}
-.stat-card .label {{ font-size:11px; color:#8899aa; margin-top:2px; }}
-.map-container {{ height:420px; margin:8px; border-radius:8px; overflow:hidden; border:1px solid #2a4a60; }}
-.charts {{ display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 8px 8px; }}
-.chart-box {{ background:#132433; border-radius:8px; padding:12px; border:1px solid #2a4a60; }}
-.chart-box h3 {{ font-size:13px; color:#7ec8f8; margin-bottom:8px; }}
-.chart-box canvas {{ width:100% !important; height:200px !important; }}
-.plane-table {{ padding:8px; }}
-.plane-table table {{ width:100%; border-collapse:collapse; font-size:12px; }}
-.plane-table th {{ background:#1a3040; color:#7ec8f8; padding:8px 6px; text-align:left; border-bottom:2px solid #2a5a7a; position:sticky; top:0; }}
-.plane-table td {{ padding:6px; border-bottom:1px solid #1a3040; }}
-.plane-table tr:hover {{ background:#1a3040; }}
-.weather-bar {{ display:flex; align-items:center; gap:16px; padding:8px 24px; background:#132433; border-bottom:1px solid #2a4a60; flex-wrap:wrap; }}
-.weather-item {{ font-size:13px; }}
-.weather-item .val {{ color:#4fc3f7; font-weight:bold; }}
-.forecast {{ padding:8px 24px; overflow-x:auto; }}
-.forecast h3 {{ font-size:13px; color:#7ec8f8; margin-bottom:8px; }}
-.forecast-table {{ width:100%; border-collapse:collapse; font-size:11px; }}
-.forecast-table th {{ background:#1a3040; color:#7ec8f8; padding:6px; border-bottom:1px solid #2a4a60; }}
-.forecast-table td {{ padding:4px 6px; border-bottom:1px solid #1a3040; text-align:center; }}
-.badge {{ display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; }}
-.badge-air {{ background:#1b5e20; color:#a5d6a7; }}
-.badge-ground {{ background:#4a2800; color:#ffcc80; }}
-.pw-overlay {{ display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; flex-direction:column; }}
-.pw-box {{ background:#132433; padding:30px; border-radius:12px; border:1px solid #2a4a60; text-align:center; }}
-.pw-box input {{ padding:10px 16px; border-radius:6px; border:1px solid #2a4a60; background:#0d2137; color:#fff; font-size:16px; margin:10px 0; width:200px; }}
-.pw-box button {{ padding:10px 24px; border-radius:6px; border:none; background:#2a5a7a; color:#fff; cursor:pointer; font-size:14px; }}
-.pw-box button:hover {{ background:#3a7aaa; }}
-.pw-error {{ color:#ef5350; font-size:12px; margin-top:4px; }}
-.hidden {{ display:none !important; }}
-.wind-arrow {{ display:inline-block; margin-left:4px; }}
-</style>
-</head>
-<body>
-<div id="pw-overlay" class="pw-overlay">
-<div class="pw-box">
-<h2 style="color:#7ec8f8; margin-bottom:12px;">藁城上空</h2>
-<p style="color:#8899aa; font-size:13px;">请输入访问密码</p>
-<input type="password" id="pw-input" placeholder="密码" autofocus>
-<button onclick="checkPw()">确认</button>
-<p id="pw-error" class="pw-error"></p>
-</div>
-</div>
-
-<div id="main-content" class="hidden">
-<div class="header">
-<h1>藁城上空 · 飞机追踪</h1>
-<span class="time">数据时间: {ts}</span>
-</div>
-
-<div class="stats">
-<div class="stat-card"><div class="num">{total}</div><div class="label">总飞机数</div></div>
-<div class="stat-card"><div class="num">{in_air}</div><div class="label">空中</div></div>
-<div class="stat-card"><div class="num">{on_ground}</div><div class="label">地面</div></div>
-<div class="stat-card"><div class="num">{len(callsigns)}</div><div class="label">有呼号</div></div>
-</div>
-
-<div class="weather-bar">
-<div class="weather-item">天气: <span class="val">{wx_desc}</span></div>
-<div class="weather-item">温度: <span class="val">{wx_temp}°C</span></div>
-<div class="weather-item">湿度: <span class="val">{wx_hum}%</span></div>
-<div class="weather-item">风速: <span class="val">{wx_wind} m/s</span></div>
-<div class="weather-item">风向: <span class="val">{wind_arrow(wx_dir)} {wx_dir}°</span></div>
-</div>
-
-<div class="map-container" id="map"></div>
-
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f7;color:#1d1d1f}}
+.lock{{position:fixed;inset:0;background:rgba(245,245,247,.97);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(20px)}}
+.lock input{{padding:12px 20px;border-radius:12px;border:1.5px solid #d2d2d7;background:#fff;font-size:16px;width:260px;text-align:center;outline:none}}
+.lock input:focus{{border-color:#0071e3}}
+.lock button{{margin-top:10px;padding:10px 36px;border-radius:20px;border:none;background:#0071e3;color:#fff;font-size:15px;font-weight:600;cursor:pointer}}
+.lock .err{{color:#ff3b30;font-size:13px;margin-top:8px;display:none}}
+nav{{display:flex;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);padding:12px 24px;border-bottom:1px solid #d2d2d7;position:sticky;top:0;z-index:100}}
+nav a{{padding:8px 20px;border-radius:8px;color:#86868b;text-decoration:none;font-size:14px;font-weight:500;margin-right:4px}}
+nav a:hover{{background:rgba(0,0,0,.04);color:#1d1d1f}}
+nav a.on{{background:#0071e3;color:#fff}}
+.container{{max-width:1200px;margin:0 auto;padding:24px}}
+.header{{margin-bottom:20px}}
+.header h1{{font-size:28px;font-weight:700}}
+.header .ts{{font-size:13px;color:#86868b;margin-top:4px}}
+.stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}}
+.card{{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}}
+.card .num{{font-size:36px;font-weight:700;color:#0071e3}}
+.card .lbl{{font-size:13px;color:#86868b;margin-top:4px}}
+.wxbar{{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:16px 20px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06)}}
+.wxbar span{{font-size:14px;color:#1d1d1f}}
+.wxbar b{{color:#0071e3}}
+#map{{height:420px;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:20px}}
+.charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}}
+.chart-box{{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}}
+.chart-box h3{{font-size:15px;font-weight:600;margin-bottom:16px;color:#1d1d1f}}
+.bars{{display:flex;align-items:flex-end;gap:2px;height:100px}}
+.bars .bar{{flex:1;background:#0071e3;border-radius:3px 3px 0 0;min-height:2px;position:relative}}
+.bars .bar:hover{{background:#2997ff}}
+.bars .bar .tip{{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap}}
+.bars .bar:hover .tip{{display:block}}
+.bar-labels{{display:flex;gap:2px;margin-top:6px}}
+.bar-labels span{{flex:1;font-size:10px;color:#86868b;text-align:center;overflow:hidden}}
+table{{width:100%;border-collapse:collapse;font-size:13px}}
+th{{text-align:left;padding:10px 12px;color:#86868b;font-weight:500;border-bottom:1px solid #e5e5ea}}
+td{{padding:10px 12px;border-bottom:1px solid #f5f5f7}}
+tr:hover td{{background:#f5f5f7}}
+</style></head><body>
+<div class="lock" id="lock"><div style="font-size:40px;margin-bottom:8px">🛰</div>
+<div style="font-size:15px;color:#86868b;margin-bottom:16px">藁城上空飞机追踪</div>
+<input type="password" id="pw" placeholder="输入密码" onkeydown="if(event.key==='Enter')unlock()">
+<button onclick="unlock()">解锁</button><div class="err" id="err">密码错误</div></div>
+<nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘</a></nav>
+<div class="container">
+<div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新于 {ts}</div></div>
+<div class="stats"><div class="card"><div class="num">{total}</div><div class="lbl">追踪飞机</div></div>
+<div class="card"><div class="num">{in_air}</div><div class="lbl">空中飞行</div></div>
+<div class="card"><div class="num">{on_ground}</div><div class="lbl">地面停放</div></div>
+<div class="card"><div class="num">{cs_count}</div><div class="lbl">有呼号</div></div></div>
+<div class="wxbar"><span>天气 <b>{wx_text}</b></span><span>温度 <b>{wx_temp}°C</b></span><span>湿度 <b>{wx_hum}%</b></span><span>风速 <b>{wx_wind} m/s</b></span></div>
+<div id="map"></div>
 <div class="charts">
-<div class="chart-box">
-<h3>每小时飞机数量趋势</h3>
-<canvas id="chart-hourly"></canvas>
+<div class="chart-box"><h3>各时段飞机量</h3><div class="bars">{hbars}</div><div class="bar-labels">{hlabels}</div></div>
+<div class="chart-box"><h3>近7日峰值</h3><div class="bars">{dbars}</div><div class="bar-labels">{dlabels}</div></div>
 </div>
-<div class="chart-box">
-<h3>近7日每日飞机峰值</h3>
-<canvas id="chart-daily"></canvas>
+<div class="chart-box"><h3>飞机列表</h3>
+<table><thead><tr><th>呼号</th><th>ICAO24</th><th>高度(m)</th><th>速度(m/s)</th><th>航向</th><th>状态</th></tr></thead><tbody>{rows}</tbody></table></div>
 </div>
-</div>
-
-<div class="plane-table">
-<table>
-<thead><tr>
-<th>呼号</th><th>航班</th><th>航司</th><th>ICAO24</th><th>纬度</th><th>经度</th><th>高度(m)</th><th>速度(m/s)</th><th>状态</th><th>类型</th>
-</tr></thead>
-<tbody>
-"""
-
-    for p in plane_js:
-        status = "地面" if p["on_ground"] else "空中"
-        badge_class = "badge-ground" if p["on_ground"] else "badge-air"
-        html += f"""<tr>
-<td>{p['callsign'] or '-'}</td>
-<td>{p['flight'] or '-'}</td>
-<td>{p['airline']}</td>
-<td>{p['icao']}</td>
-<td>{p['lat']:.4f}</td>
-<td>{p['lon']:.4f}</td>
-<td>{p['alt']:.0f}</td>
-<td>{p['spd']:.0f}</td>
-<td><span class="badge {badge_class}">{status}</span></td>
-<td>{p['category'] or '-'}</td>
-</tr>
-"""
-
-    html += """</tbody></table></div>
-</div>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const PASSWORD_HASH = '""" + PASSWORD_HASH + """';
+function unlock(){{crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x==="{PW_HASH}")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"}})}}
+var m=L.map("map").setView([37.94,114.84],11);
+L.tileLayer("https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png",{{attribution:'&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:18}}).addTo(m);
+var planes={json.dumps(pjs,ensure_ascii=False)};
+planes.forEach(function(p){{var ic=L.divIcon({{html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">✈</div>',className:"",iconSize:[22,22],iconAnchor:[11,11]}});L.marker([p.lat,p.lon],{{icon:ic}}).addTo(m).bindPopup("<b>"+p.cs+"</b><br>高度:"+p.alt.toFixed(0)+"m<br>速度:"+p.vel.toFixed(0)+"m/s")}})
+</script></body></html>'''
 
-function sha256(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash |= 0;
-    }
-    return Math.abs(hash).toString(16).padStart(8, '0');
-}
+    with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"index.html: {len(html)} bytes")
 
-function checkPw() {
-    const input = document.getElementById('pw-input').value;
-    if (input === 'gaocheng') {
-        document.getElementById('pw-overlay').classList.add('hidden');
-        document.getElementById('main-content').classList.remove('hidden');
-        initMap();
-        initCharts();
-    } else {
-        document.getElementById('pw-error').textContent = '密码错误，请重试';
-    }
-}
-
-document.getElementById('pw-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') checkPw();
-});
-
-const planeData = """ + json.dumps(plane_js, ensure_ascii=False) + """;
-const hourlyData = """ + json.dumps(hourly_sorted, ensure_ascii=False) + """;
-const dailyData = """ + json.dumps(daily_sorted, ensure_ascii=False) + """;
-
-function initMap() {
-    const map = new AMap.Map('map', {
-        center: [114.85, 38.04],
-        zoom: 9,
-        mapStyle: 'amap://styles/dark',
-    });
-
-    planeData.forEach(p => {
-        const color = p.on_ground ? '#ff9800' : '#00e5ff';
-        const marker = new AMap.Marker({
-            position: [p.lon, p.lat],
-            title: p.callsign || p.flight || 'N/A',
-            icon: new AMap.Icon({
-                size: new AMap.Size(20, 20),
-                image: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="6" fill="${color}" opacity="0.8"/><circle cx="10" cy="10" r="2" fill="white"/></svg>`),
-            })
-        });
-        marker.setMap(map);
-
-        if (!p.on_ground) {
-            marker.on('click', function() {
-                const content = `<div style="font-size:12px;padding:6px;background:#132433;color:#e0e0e0;border-radius:4px;border:1px solid #2a4a60;">
-                    <b>${p.callsign || p.flight || 'N/A'}</b><br>
-                    高度: ${p.alt.toFixed(0)}m / 速度: ${p.spd.toFixed(0)}m/s<br>
-                    航司: ${p.airline} | ${p.flight || ''}
-                </div>`;
-                new AMap.InfoWindow({ content: content, offset: new AMap.Pixel(0, -20) }).open(map, marker.getPosition());
-            });
-        }
-    });
-
-    // 藁城标记
-    new AMap.Marker({
-        position: [114.85, 38.04],
-        icon: new AMap.Icon({
-            size: new AMap.Size(24, 24),
-            image: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="8" fill="#ef5350" opacity="0.9"/><circle cx="12" cy="12" r="3" fill="white"/></svg>'),
-        }),
-        title: '藁城'
-    }).setMap(map);
-}
-
-function initCharts() {
-    // 每小时
-    const hLabels = hourlyData.map(d => d[0] + ':00');
-    const hValues = hourlyData.map(d => d[1]);
-    new Chart(document.getElementById('chart-hourly'), {
-        type: 'line',
-        data: {
-            labels: hLabels,
-            datasets: [{
-                label: '飞机数量',
-                data: hValues,
-                borderColor: '#4fc3f7',
-                backgroundColor: 'rgba(79,195,247,0.1)',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#8899aa', font: { size: 11 } } } },
-            scales: {
-                x: { ticks: { color: '#8899aa', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#1a3040' } },
-                y: { ticks: { color: '#8899aa', font: { size: 10 } }, grid: { color: '#1a3040' } }
-            }
-        }
-    });
-
-    // 每日
-    const dLabels = dailyData.map(d => d[0]);
-    const dValues = dailyData.map(d => d[1]);
-    new Chart(document.getElementById('chart-daily'), {
-        type: 'bar',
-        data: {
-            labels: dLabels,
-            datasets: [{
-                label: '峰值',
-                data: dValues,
-                backgroundColor: 'rgba(79,195,247,0.4)',
-                borderColor: '#4fc3f7',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#8899aa', font: { size: 11 } } } },
-            scales: {
-                x: { ticks: { color: '#8899aa', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#1a3040' } },
-                y: { ticks: { color: '#8899aa', font: { size: 10 } }, grid: { color: '#1a3040' } }
-            }
-        }
-    });
-}
-</script>
-<script src="https://webapi.amap.com/maps?v=2.0&key=你的高德Key"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-</body>
-</html>"""
-
-    return html
-
-
-def generate_weather_html(data, records):
-    """气象仪表盘 - Chart.js"""
+def make_weather(data, records):
     ts = data.get("timestamp", "")
     weather = data.get("weather", {})
-    hourly_data = data.get("forecast", {}).get("hourly", [])
+    if isinstance(weather, dict) and "current" in weather:
+        wc = weather["current"]
+    else:
+        wc = weather if isinstance(weather, dict) else {}
+    fc = data.get("forecast", {}).get("hourly", [])
+    wx_temp = wc.get("temperature_2m", "--")
+    wx_hum = wc.get("relative_humidity_2m", "--")
+    wx_wind = wc.get("wind_speed_10m", "--")
+    wx_wdir = wc.get("wind_direction_10m", "--")
+    wx_code = wc.get("weather_code", -1)
+    wx_text = WX_CN.get(wx_code, "--")
 
-    current = weather.get("current", {})
-    temp = current.get("temperature_2m", "N/A")
-    hum = current.get("relative_humidity_2m", "N/A")
-    wind = current.get("wind_speed_10m", "N/A")
-    wdir = current.get("wind_direction_10m", "N/A")
-    wx_code = current.get("weather_code", -1)
-    wx_desc = WEATHER_CN.get(wx_code, f"代码{wx_code}")
+    times = [h.get("time","")[-8:-3] for h in fc[:48]]
+    temps = [h.get("temperature", h.get("temperature_2m",0)) for h in fc[:48]]
+    humids = [h.get("humidity", h.get("relative_humidity_2m",0)) for h in fc[:48]]
+    precip = [h.get("precip_prob", h.get("precipitation_probability",0)) or 0 for h in fc[:48]]
+    winds = [h.get("wind_speed", h.get("wind_speed_10m",0)) for h in fc[:48]]
+    wdirs = [h.get("wind_direction", h.get("wind_direction_10m",0)) for h in fc[:48]]
+    vis = [h.get("visibility",0) or 0 for h in fc[:48]]
 
-    # 48小时温度
-    temp_labels = [h.get("time", "")[-5:] for h in hourly_data[:48]]
-    temp_vals = [h.get("temperature_2m", 0) for h in hourly_data[:48]]
+    cd = json.dumps({"labels":times,"temp":temps,"humid":humids,"precip":precip,"wind":winds,"wdir":wdirs,"vis":vis}, ensure_ascii=False)
 
-    # 湿度
-    hum_vals = [h.get("relative_humidity_2m", 0) for h in hourly_data[:48]]
+    # wind table
+    wrows = ""
+    for i, t in enumerate(times):
+        ws = winds[i] if i < len(winds) else "-"
+        wd = wdirs[i] if i < len(wdirs) else "-"
+        desc = "强风" if (ws or 0) > 10 else "和风" if (ws or 0) > 5 else "微风" if (ws or 0) > 1 else "静风"
+        wrows += f"<tr><td>{t}</td><td>{wd}°</td><td>{ws}</td><td>{desc}</td></tr>"
 
-    # 风速
-    wind_vals = [h.get("wind_speed_10m", 0) for h in hourly_data[:48]]
-
-    # 降水概率
-    precip_vals = [h.get("precipitation_probability", 0) or 0 for h in hourly_data[:48]]
-
-    # 云量
-    cloud_vals = [h.get("cloud_cover", 0) or 0 for h in hourly_data[:48]]
-
-    # 近7日温度范围
-    daily_temps = {}
-    for r in records:
-        d = r.get("timestamp", "")[:10]
-        wx_daily = r.get("weather", {}).get("current", {})
-        t = wx_daily.get("temperature_2m")
-        if d and t is not None:
-            daily_temps.setdefault(d, []).append(t)
-    daily_labels = sorted(daily_temps.keys())[-7:]
-    daily_max = [max(daily_temps.get(d, [0])) for d in daily_labels]
-    daily_min = [min(daily_temps.get(d, [0])) for d in daily_labels]
-
-    def wind_arrow(deg):
-        try:
-            d = float(deg)
-            dirs = ["↓北", "↙", "←西", "↖", "↑南", "↗", "→东", "↘"]
-            return dirs[round(d / 45) % 8]
-        except:
-            return "?"
-
-    html = f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="referrer" content="no-referrer">
-<title>藁城气象仪表盘</title>
-<style>
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f1923; color:#e0e0e0; }}
-.header {{ background:linear-gradient(135deg, #1a3a4a, #0d2137); padding:16px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #2a5a7a; }}
-.header h1 {{ font-size:20px; color:#7ec8f8; }}
-.header .time {{ font-size:12px; color:#8899aa; }}
-.current {{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; padding:16px 24px; }}
-.cur-card {{ background:#132433; border-radius:8px; padding:12px; text-align:center; border:1px solid #2a4a60; }}
-.cur-card .val {{ font-size:24px; font-weight:bold; color:#4fc3f7; }}
-.cur-card .label {{ font-size:11px; color:#8899aa; margin-top:4px; }}
-.charts {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:0 24px 24px; }}
-.chart-box {{ background:#132433; border-radius:8px; padding:12px; border:1px solid #2a4a60; }}
-.chart-box h3 {{ font-size:13px; color:#7ec8f8; margin-bottom:8px; }}
-.chart-box canvas {{ width:100% !important; height:220px !important; }}
-@media (max-width:768px) {{ .current {{ grid-template-columns:repeat(3,1fr); }} .charts {{ grid-template-columns:1fr; }} }}
-</style>
-</head>
-<body>
-<div class="header">
-<h1>藁城 · 气象仪表盘</h1>
-<span class="time">数据时间: {ts}</span>
-</div>
-
-<div class="current">
-<div class="cur-card"><div class="val">{wx_desc}</div><div class="label">天气状况</div></div>
-<div class="cur-card"><div class="val">{temp}°C</div><div class="label">气温</div></div>
-<div class="cur-card"><div class="val">{hum}%</div><div class="label">相对湿度</div></div>
-<div class="cur-card"><div class="val">{wind} m/s {wind_arrow(wdir)}</div><div class="label">风速/风向</div></div>
-<div class="cur-card"><div class="val">{len(hourly_data)}条</div><div class="label">预报数据</div></div>
-</div>
-
-<div class="charts">
-<div class="chart-box">
-<h3>48小时温度变化</h3>
-<canvas id="chart-temp"></canvas>
-</div>
-<div class="chart-box">
-<h3>48小时湿度变化</h3>
-<canvas id="chart-hum"></canvas>
-</div>
-<div class="chart-box">
-<h3>48小时风速</h3>
-<canvas id="chart-wind"></canvas>
-</div>
-<div class="chart-box">
-<h3>48小时降水概率</h3>
-<canvas id="chart-precip"></canvas>
-</div>
-<div class="chart-box">
-<h3>48小时云量</h3>
-<canvas id="chart-cloud"></canvas>
-</div>
-<div class="chart-box">
-<h3>近7日温度范围</h3>
-<canvas id="chart-range"></canvas>
-</div>
-</div>
-
-<script>
-const tempLabels = """ + json.dumps(temp_labels, ensure_ascii=False) + """;
-const tempVals = """ + json.dumps(temp_vals, ensure_ascii=False) + """;
-const humVals = """ + json.dumps(hum_vals, ensure_ascii=False) + """;
-const windVals = """ + json.dumps(wind_vals, ensure_ascii=False) + """;
-const precipVals = """ + json.dumps(precip_vals, ensure_ascii=False) + """;
-const cloudVals = """ + json.dumps(cloud_vals, ensure_ascii=False) + """;
-const dailyLabels = """ + json.dumps(daily_labels, ensure_ascii=False) + """;
-const dailyMax = """ + json.dumps(daily_max, ensure_ascii=False) + """;
-const dailyMin = """ + json.dumps(daily_min, ensure_ascii=False) + """;
-
-const chartOpts = {{
-    responsive: true, maintainAspectRatio: false,
-    plugins: {{ legend: {{ labels: {{ color: '#8899aa', font: {{ size: 10 }} }} }} }},
-    scales: {{
-        x: {{ ticks: {{ color: '#8899aa', font: {{ size: 9 }}, maxRotation: 45, maxTicksLimit: 12 }}, grid: {{ color: '#1a3040' }} }},
-        y: {{ ticks: {{ color: '#8899aa', font: {{ size: 9 }} }}, grid: {{ color: '#1a3040' }} }}
-    }}
-}};
-
-new Chart(document.getElementById('chart-temp'), {{
-    type: 'line', data: {{ labels: tempLabels, datasets: [{{ label: '温度(°C)', data: tempVals, borderColor: '#ef5350', backgroundColor: 'rgba(239,83,80,0.1)', fill: true, tension: 0.3 }}] }}, options: chartOpts
-}});
-new Chart(document.getElementById('chart-hum'), {{
-    type: 'line', data: {{ labels: tempLabels, datasets: [{{ label: '湿度(%)', data: humVals, borderColor: '#42a5f5', backgroundColor: 'rgba(66,165,245,0.1)', fill: true, tension: 0.3 }}] }}, options: chartOpts
-}});
-new Chart(document.getElementById('chart-wind'), {{
-    type: 'bar', data: {{ labels: tempLabels, datasets: [{{ label: '风速(m/s)', data: windVals, backgroundColor: 'rgba(129,212,250,0.4)', borderColor: '#81d4fa', borderWidth: 1 }}] }}, options: chartOpts
-}});
-new Chart(document.getElementById('chart-precip'), {{
-    type: 'bar', data: {{ labels: tempLabels, datasets: [{{ label: '降水概率(%)', data: precipVals, backgroundColor: 'rgba(79,195,247,0.3)', borderColor: '#4fc3f7', borderWidth: 1 }}] }}, options: chartOpts
-}});
-new Chart(document.getElementById('chart-cloud'), {{
-    type: 'line', data: {{ labels: tempLabels, datasets: [{{ label: '云量(%)', data: cloudVals, borderColor: '#b0bec5', backgroundColor: 'rgba(176,190,197,0.1)', fill: true, tension: 0.3 }}] }}, options: chartOpts
-}});
-new Chart(document.getElementById('chart-range'), {{
-    type: 'bar', data: {{
-        labels: dailyLabels,
-        datasets: [
-            {{ label: '最高(°C)', data: dailyMax, backgroundColor: 'rgba(239,83,80,0.5)', borderColor: '#ef5350', borderWidth: 1 }},
-            {{ label: '最低(°C)', data: dailyMin, backgroundColor: 'rgba(66,165,245,0.5)', borderColor: '#42a5f5', borderWidth: 1 }}
-        ]
-    }}, options: chartOpts
-}});
-</script>
+    html = f'''<!DOCTYPE html><html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="robots" content="noindex">
+<title>藁城 · 气象仪表盘</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-</body>
-</html>"""
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f7;color:#1d1d1f}}
+nav{{display:flex;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);padding:12px 24px;border-bottom:1px solid #d2d2d7;position:sticky;top:0;z-index:100}}
+nav a{{padding:8px 20px;border-radius:8px;color:#86868b;text-decoration:none;font-size:14px;font-weight:500;margin-right:4px}}
+nav a:hover{{background:rgba(0,0,0,.04);color:#1d1d1f}}
+nav a.on{{background:#0071e3;color:#fff}}
+.container{{max-width:1200px;margin:0 auto;padding:24px}}
+.header{{margin-bottom:20px}}
+.header h1{{font-size:28px;font-weight:700}}
+.header .ts{{font-size:13px;color:#86868b;margin-top:4px}}
+.stats{{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}}
+.card{{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);text-align:center}}
+.card .num{{font-size:28px;font-weight:700;color:#0071e3}}
+.card .lbl{{font-size:13px;color:#86868b;margin-top:4px}}
+.charts{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}}
+.chart-box{{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}}
+.chart-box h3{{font-size:15px;font-weight:600;margin-bottom:12px}}
+.chart-box canvas{{max-height:240px}}
+.chart-wide{{grid-column:1/-1}}
+.chart-wide canvas{{max-height:300px}}
+table{{width:100%;border-collapse:collapse;font-size:13px}}
+th{{text-align:left;padding:8px 12px;color:#86868b;font-weight:500;border-bottom:1px solid #e5e5ea}}
+td{{padding:8px 12px;border-bottom:1px solid #f5f5f7}}
+tr:hover td{{background:#f5f5f7}}
+</style></head><body>
+<nav><a href="index.html">飞机追踪</a><a class="on" href="weather.html">气象仪表盘</a></nav>
+<div class="container">
+<div class="header"><h1>藁城气象仪表盘</h1><div class="ts">更新于 {ts}</div></div>
+<div class="stats">
+<div class="card"><div class="num">{wx_text}</div><div class="lbl">天气</div></div>
+<div class="card"><div class="num">{wx_temp}°C</div><div class="lbl">温度</div></div>
+<div class="card"><div class="num">{wx_hum}%</div><div class="lbl">湿度</div></div>
+<div class="card"><div class="num">{wx_wind}m/s</div><div class="lbl">风速</div></div>
+<div class="card"><div class="num">{wx_wdir}°</div><div class="lbl">风向</div></div>
+</div>
+<div class="charts">
+<div class="chart-box"><h3>24小时温度趋势</h3><canvas id="c1"></canvas></div>
+<div class="chart-box"><h3>24小时湿度趋势</h3><canvas id="c2"></canvas></div>
+<div class="chart-box"><h3>24小时降水概率</h3><canvas id="c3"></canvas></div>
+<div class="chart-box"><h3>24小时能见度</h3><canvas id="c4"></canvas></div>
+<div class="chart-box"><h3>24小时风速</h3><canvas id="c5"></canvas></div>
+<div class="chart-box"><h3>24小时风向风况详情</h3><table><thead><tr><th>时间</th><th>风向(°)</th><th>风速(m/s)</th><th>风况</th></tr></thead><tbody>{wrows}</tbody></table></div>
+</div></div>
+<script>
+var d={cd};
+var o={{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}},scales:{{x:{{ticks:{{color:"#86868b",font:{{size:10}},maxTicksLimit:12}},grid:{{color:"#e5e5ea"}}}},y:{{ticks:{{color:"#86868b",font:{{size:10}}}},grid:{{color:"#e5e5ea"}}}}}}}};
+function L(id,vals,color){{new Chart(document.getElementById(id),{{type:"line",data:{{labels:d.labels,datasets:[{{data:vals,borderColor:color,backgroundColor:color+"18",fill:true,tension:.4,pointRadius:2}}]}},options:o}})}}
+function B(id,vals){{new Chart(document.getElementById(id),{{type:"bar",data:{{labels:d.labels,datasets:[{{data:vals,backgroundColor:vals.map(function(v){{return v>50?"#ef4444":v>20?"#f59e0b":"#0071e3"}}),borderRadius:4}}]}},options:o}})}}
+if(d.labels.length){{L("c1",d.temp,"#0071e3");L("c2",d.humid,"#a78bfa");B("c3",d.precip);L("c4",d.vis,"#34d399");L("c5",d.wind,"#f97316")}}
+</script></body></html>'''
 
-    return html
-
+    with open(os.path.join(DOCS_DIR, "weather.html"), "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"weather.html: {len(html)} bytes")
 
 def main():
+    os.makedirs(DOCS_DIR, exist_ok=True)
     data = load_latest()
     records = load_history()
-
-    os.makedirs(DOCS_DIR, exist_ok=True)
-
-    index_html = generate_index_html(data, records)
-    with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
-        f.write(index_html)
-
-    weather_html = generate_weather_html(data, records)
-    with open(os.path.join(DOCS_DIR, "weather.html"), "w", encoding="utf-8") as f:
-        f.write(weather_html)
-
-    print(f"Generated {len(index_html)} bytes -> docs/index.html")
-    print(f"Generated {len(weather_html)} bytes -> docs/weather.html")
+    make_index(data, records)
+    make_weather(data, records)
 
 if __name__ == "__main__":
     main()
