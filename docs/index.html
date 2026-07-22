@@ -1,237 +1,71 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>藁城上空 - 飞机追踪</title>
+<!DOCTYPE html><html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="robots" content="noindex">
+<title>藁城上空 · 飞机追踪</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0f1923; color:#e0e0e0; }
-.header { background:linear-gradient(135deg, #1a3a4a, #0d2137); padding:16px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #2a5a7a; }
-.header h1 { font-size:20px; color:#7ec8f8; }
-.header .time { font-size:12px; color:#8899aa; }
-.stats { display:flex; gap:12px; padding:12px 24px; background:#132433; flex-wrap:wrap; }
-.stat-card { background:#1a3040; border-radius:8px; padding:10px 16px; min-width:100px; text-align:center; border:1px solid #2a4a60; }
-.stat-card .num { font-size:22px; font-weight:bold; color:#4fc3f7; }
-.stat-card .label { font-size:11px; color:#8899aa; margin-top:2px; }
-.map-container { height:420px; margin:8px; border-radius:8px; overflow:hidden; border:1px solid #2a4a60; }
-.charts { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 8px 8px; }
-.chart-box { background:#132433; border-radius:8px; padding:12px; border:1px solid #2a4a60; }
-.chart-box h3 { font-size:13px; color:#7ec8f8; margin-bottom:8px; }
-.chart-box canvas { width:100% !important; height:200px !important; }
-.plane-table { padding:8px; }
-.plane-table table { width:100%; border-collapse:collapse; font-size:12px; }
-.plane-table th { background:#1a3040; color:#7ec8f8; padding:8px 6px; text-align:left; border-bottom:2px solid #2a5a7a; position:sticky; top:0; }
-.plane-table td { padding:6px; border-bottom:1px solid #1a3040; }
-.plane-table tr:hover { background:#1a3040; }
-.weather-bar { display:flex; align-items:center; gap:16px; padding:8px 24px; background:#132433; border-bottom:1px solid #2a4a60; flex-wrap:wrap; }
-.weather-item { font-size:13px; }
-.weather-item .val { color:#4fc3f7; font-weight:bold; }
-.forecast { padding:8px 24px; overflow-x:auto; }
-.forecast h3 { font-size:13px; color:#7ec8f8; margin-bottom:8px; }
-.forecast-table { width:100%; border-collapse:collapse; font-size:11px; }
-.forecast-table th { background:#1a3040; color:#7ec8f8; padding:6px; border-bottom:1px solid #2a4a60; }
-.forecast-table td { padding:4px 6px; border-bottom:1px solid #1a3040; text-align:center; }
-.badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; }
-.badge-air { background:#1b5e20; color:#a5d6a7; }
-.badge-ground { background:#4a2800; color:#ffcc80; }
-.pw-overlay { display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; flex-direction:column; }
-.pw-box { background:#132433; padding:30px; border-radius:12px; border:1px solid #2a4a60; text-align:center; }
-.pw-box input { padding:10px 16px; border-radius:6px; border:1px solid #2a4a60; background:#0d2137; color:#fff; font-size:16px; margin:10px 0; width:200px; }
-.pw-box button { padding:10px 24px; border-radius:6px; border:none; background:#2a5a7a; color:#fff; cursor:pointer; font-size:14px; }
-.pw-box button:hover { background:#3a7aaa; }
-.pw-error { color:#ef5350; font-size:12px; margin-top:4px; }
-.hidden { display:none !important; }
-.wind-arrow { display:inline-block; margin-left:4px; }
-</style>
-</head>
-<body>
-<div id="pw-overlay" class="pw-overlay">
-<div class="pw-box">
-<h2 style="color:#7ec8f8; margin-bottom:12px;">藁城上空</h2>
-<p style="color:#8899aa; font-size:13px;">请输入访问密码</p>
-<input type="password" id="pw-input" placeholder="密码" autofocus>
-<button onclick="checkPw()">确认</button>
-<p id="pw-error" class="pw-error"></p>
-</div>
-</div>
-
-<div id="main-content" class="hidden">
-<div class="header">
-<h1>藁城上空 · 飞机追踪</h1>
-<span class="time">数据时间: </span>
-</div>
-
-<div class="stats">
-<div class="stat-card"><div class="num">8</div><div class="label">总飞机数</div></div>
-<div class="stat-card"><div class="num">8</div><div class="label">空中</div></div>
-<div class="stat-card"><div class="num">0</div><div class="label">地面</div></div>
-<div class="stat-card"><div class="num">0</div><div class="label">有呼号</div></div>
-</div>
-
-<div class="weather-bar">
-<div class="weather-item">天气: <span class="val">代码-1</span></div>
-<div class="weather-item">温度: <span class="val">N/A°C</span></div>
-<div class="weather-item">湿度: <span class="val">N/A%</span></div>
-<div class="weather-item">风速: <span class="val">N/A m/s</span></div>
-<div class="weather-item">风向: <span class="val">? N/A°</span></div>
-</div>
-
-<div class="map-container" id="map"></div>
-
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f7;color:#1d1d1f}
+.lock{position:fixed;inset:0;background:rgba(245,245,247,.97);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(20px)}
+.lock input{padding:12px 20px;border-radius:12px;border:1.5px solid #d2d2d7;background:#fff;font-size:16px;width:260px;text-align:center;outline:none}
+.lock input:focus{border-color:#0071e3}
+.lock button{margin-top:10px;padding:10px 36px;border-radius:20px;border:none;background:#0071e3;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.lock .err{color:#ff3b30;font-size:13px;margin-top:8px;display:none}
+nav{display:flex;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);padding:12px 24px;border-bottom:1px solid #d2d2d7;position:sticky;top:0;z-index:100}
+nav a{padding:8px 20px;border-radius:8px;color:#86868b;text-decoration:none;font-size:14px;font-weight:500;margin-right:4px}
+nav a:hover{background:rgba(0,0,0,.04);color:#1d1d1f}
+nav a.on{background:#0071e3;color:#fff}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+.header{margin-bottom:20px}
+.header h1{font-size:28px;font-weight:700}
+.header .ts{font-size:13px;color:#86868b;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.card .num{font-size:36px;font-weight:700;color:#0071e3}
+.card .lbl{font-size:13px;color:#86868b;margin-top:4px}
+.wxbar{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:16px 20px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.wxbar span{font-size:14px;color:#1d1d1f}
+.wxbar b{color:#0071e3}
+#map{height:420px;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:20px}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-box{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.chart-box h3{font-size:15px;font-weight:600;margin-bottom:16px;color:#1d1d1f}
+.bars{display:flex;align-items:flex-end;gap:2px;height:100px}
+.bars .bar{flex:1;background:#0071e3;border-radius:3px 3px 0 0;min-height:2px;position:relative}
+.bars .bar:hover{background:#2997ff}
+.bars .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap}
+.bars .bar:hover .tip{display:block}
+.bar-labels{display:flex;gap:2px;margin-top:6px}
+.bar-labels span{flex:1;font-size:10px;color:#86868b;text-align:center;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;color:#86868b;font-weight:500;border-bottom:1px solid #e5e5ea}
+td{padding:10px 12px;border-bottom:1px solid #f5f5f7}
+tr:hover td{background:#f5f5f7}
+</style></head><body>
+<div class="lock" id="lock"><div style="font-size:40px;margin-bottom:8px">🛰</div>
+<div style="font-size:15px;color:#86868b;margin-bottom:16px">藁城上空飞机追踪</div>
+<input type="password" id="pw" placeholder="输入密码" onkeydown="if(event.key==='Enter')unlock()">
+<button onclick="unlock()">解锁</button><div class="err" id="err">密码错误</div></div>
+<nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘</a></nav>
+<div class="container">
+<div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新于 </div></div>
+<div class="stats"><div class="card"><div class="num">9</div><div class="lbl">追踪飞机</div></div>
+<div class="card"><div class="num">9</div><div class="lbl">空中飞行</div></div>
+<div class="card"><div class="num">0</div><div class="lbl">地面停放</div></div>
+<div class="card"><div class="num">0</div><div class="lbl">有呼号</div></div></div>
+<div class="wxbar"><span>天气 <b>--</b></span><span>温度 <b>--°C</b></span><span>湿度 <b>--%</b></span><span>风速 <b>-- m/s</b></span></div>
+<div id="map"></div>
 <div class="charts">
-<div class="chart-box">
-<h3>每小时飞机数量趋势</h3>
-<canvas id="chart-hourly"></canvas>
+<div class="chart-box"><h3>各时段飞机量</h3><div class="bars"></div><div class="bar-labels"></div></div>
+<div class="chart-box"><h3>近7日峰值</h3><div class="bars"><div class="bar" style="height:100.0%"><span class="tip">: 9架</span></div></div><div class="bar-labels"><span></span></div></div>
 </div>
-<div class="chart-box">
-<h3>近7日每日飞机峰值</h3>
-<canvas id="chart-daily"></canvas>
+<div class="chart-box"><h3>飞机列表</h3>
+<table><thead><tr><th>呼号</th><th>ICAO24</th><th>高度(m)</th><th>速度(m/s)</th><th>航向</th><th>状态</th></tr></thead><tbody><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr></tbody></table></div>
 </div>
-</div>
-
-<div class="plane-table">
-<table>
-<thead><tr>
-<th>呼号</th><th>航班</th><th>航司</th><th>ICAO24</th><th>纬度</th><th>经度</th><th>高度(m)</th><th>速度(m/s)</th><th>状态</th><th>类型</th>
-</tr></thead>
-<tbody>
-</tbody></table></div>
-</div>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const PASSWORD_HASH = 'ed9b7dfe821ab674871bc9244d80bae4e8d6dbe5122f34247b8c2854e6cc525e';
-
-function sha256(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash |= 0;
-    }
-    return Math.abs(hash).toString(16).padStart(8, '0');
-}
-
-function checkPw() {
-    const input = document.getElementById('pw-input').value;
-    const hash = sha256(input);
-    // 简化的哈希比对 — 生产环境应使用完整 SHA-256
-    if (input === 'gaocheng') {
-        document.getElementById('pw-overlay').classList.add('hidden');
-        document.getElementById('main-content').classList.remove('hidden');
-        initMap();
-        initCharts();
-    } else {
-        document.getElementById('pw-error').textContent = '密码错误，请重试';
-    }
-}
-
-document.getElementById('pw-input').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') checkPw();
-});
-
-const planeData = [];
-const hourlyData = [];
-const dailyData = [["", 8]];
-
-function initMap() {
-    const map = new AMap.Map('map', {
-        center: [114.85, 38.04],
-        zoom: 9,
-        mapStyle: 'amap://styles/dark',
-    });
-
-    planeData.forEach(p => {
-        const color = p.on_ground ? '#ff9800' : '#00e5ff';
-        const marker = new AMap.Marker({
-            position: [p.lon, p.lat],
-            title: p.callsign || p.flight || 'N/A',
-            icon: new AMap.Icon({
-                size: new AMap.Size(20, 20),
-                image: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="6" fill="${color}" opacity="0.8"/><circle cx="10" cy="10" r="2" fill="white"/></svg>`),
-            })
-        });
-        marker.setMap(map);
-
-        if (!p.on_ground) {
-            marker.on('click', function() {
-                const content = `<div style="font-size:12px;padding:6px;background:#132433;color:#e0e0e0;border-radius:4px;border:1px solid #2a4a60;">
-                    <b>${p.callsign || p.flight || 'N/A'}</b><br>
-                    高度: ${p.alt.toFixed(0)}m / 速度: ${p.spd.toFixed(0)}m/s<br>
-                    航司: ${p.airline} | ${p.flight || ''}
-                </div>`;
-                new AMap.InfoWindow({ content: content, offset: new AMap.Pixel(0, -20) }).open(map, marker.getPosition());
-            });
-        }
-    });
-
-    // 藁城标记
-    new AMap.Marker({
-        position: [114.85, 38.04],
-        icon: new AMap.Icon({
-            size: new AMap.Size(24, 24),
-            image: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="8" fill="#ef5350" opacity="0.9"/><circle cx="12" cy="12" r="3" fill="white"/></svg>'),
-        }),
-        title: '藁城'
-    }).setMap(map);
-}
-
-function initCharts() {
-    // 每小时
-    const hLabels = hourlyData.map(d => d[0] + ':00');
-    const hValues = hourlyData.map(d => d[1]);
-    new Chart(document.getElementById('chart-hourly'), {
-        type: 'line',
-        data: {
-            labels: hLabels,
-            datasets: [{
-                label: '飞机数量',
-                data: hValues,
-                borderColor: '#4fc3f7',
-                backgroundColor: 'rgba(79,195,247,0.1)',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#8899aa', font: { size: 11 } } } },
-            scales: {
-                x: { ticks: { color: '#8899aa', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#1a3040' } },
-                y: { ticks: { color: '#8899aa', font: { size: 10 } }, grid: { color: '#1a3040' } }
-            }
-        }
-    });
-
-    // 每日
-    const dLabels = dailyData.map(d => d[0]);
-    const dValues = dailyData.map(d => d[1]);
-    new Chart(document.getElementById('chart-daily'), {
-        type: 'bar',
-        data: {
-            labels: dLabels,
-            datasets: [{
-                label: '峰值',
-                data: dValues,
-                backgroundColor: 'rgba(79,195,247,0.4)',
-                borderColor: '#4fc3f7',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#8899aa', font: { size: 11 } } } },
-            scales: {
-                x: { ticks: { color: '#8899aa', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#1a3040' } },
-                y: { ticks: { color: '#8899aa', font: { size: 10 } }, grid: { color: '#1a3040' } }
-            }
-        }
-    });
-}
-</script>
-<script src="https://webapi.amap.com/maps?v=2.0&key=你的高德Key"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-</body>
-</html>
+function unlock(){crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x==="ed9b7dfe821ab674871bc9244d80bae4e8d6dbe5122f34247b8c2854e6cc525e")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"})}
+var m=L.map("map").setView([37.94,114.84],11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:18}).addTo(m);
+var planes=[];
+planes.forEach(function(p){var ic=L.divIcon({html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">✈</div>',className:"",iconSize:[22,22],iconAnchor:[11,11]});L.marker([p.lat,p.lon],{icon:ic}).addTo(m).bindPopup("<b>"+p.cs+"</b><br>高度:"+p.alt.toFixed(0)+"m<br>速度:"+p.vel.toFixed(0)+"m/s")})
+</script></body></html>
