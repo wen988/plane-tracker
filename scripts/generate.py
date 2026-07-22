@@ -323,7 +323,7 @@ footer {{
     <h2>📊 今日每小时观测量</h2>
     <div class="bars">
         {"".join(
-            f'<div class="bar" style="height:{max(4, int(v / max(hourly_values)*130))}px"><span class="tip">{v}</span><span class="hour">{h}时</span></div>'
+            f'<div class="bar" style="height:{max(4, int(v / (max(hourly_values) or 1)*130))}px"><span class="tip">{v}</span><span class="hour">{h}时</span></div>'
             for h, v in zip(hourly_labels, hourly_values)
         ) if hourly_values else '<p style="color:var(--secondary)">数据采集中…</p>'}
     </div>
