@@ -2,7 +2,7 @@ name: Fetch Plane Data
 
 on:
   schedule:
-    - cron: "30 */2 * * *"   # 每2小时一次
+    - cron: "30 */2 * * *"
   workflow_dispatch:
 
 permissions:
