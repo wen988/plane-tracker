@@ -115,7 +115,7 @@ def build():
             continue
     hourly_labels = sorted(hourly.keys())
     hourly_values = [hourly[h] for h in hourly_labels]
-    max_hourly = max(hourly_values) if hourly_values else 1
+    max_hourly = (max(hourly_values) or 1) if hourly_values else 1
     bar_chart = ""
     for h, v in zip(hourly_labels, hourly_values):
         pct = max(4, int(v / max_hourly * 100))
