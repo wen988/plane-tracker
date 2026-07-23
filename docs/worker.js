@@ -166,8 +166,7 @@ async function parseKuaishou(shareUrl) {
   // 直接访问分享页获取HTML（跟随重定向拿到完整页面）
   const resp = await fetch(shareUrl, {
     headers: {
-      'User-Agent': MOBILE_UA,
-      'Accept': 'text/html,application/xhtml+xml'
+      'User-Agent': MOBILE_UA
     }
   });
   
