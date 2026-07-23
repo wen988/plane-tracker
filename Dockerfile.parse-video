@@ -1,0 +1,2 @@
+FROM wujunwei928/parse-video:latest
+EXPOSE 8080

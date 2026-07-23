@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: parse-video-api
+    env: docker
+    dockerfilePath: ./Dockerfile.parse-video
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: "8080"
