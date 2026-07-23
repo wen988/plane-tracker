@@ -120,6 +120,9 @@ def fetch_states() -> list:
                             "on_ground": s[8] if len(s) > 8 else False,
                             "velocity": s[9] if len(s) > 9 else None,
                             "track": s[10] if len(s) > 10 else None,
+                            "vertical_rate": s[11] if len(s) > 11 else None,
+                            "geo_altitude": s[13] if len(s) > 13 else None,
+                            "squawk": s[14] if len(s) > 14 else None,
                         })
                     return planes
             except Exception as e:
@@ -144,6 +147,9 @@ def fetch_states() -> list:
                 "on_ground": s[8] if len(s) > 8 else False,
                 "velocity": s[9] if len(s) > 9 else None,
                 "track": s[10] if len(s) > 10 else None,
+                "vertical_rate": s[11] if len(s) > 11 else None,
+                "geo_altitude": s[13] if len(s) > 13 else None,
+                "squawk": s[14] if len(s) > 14 else None,
             })
         return planes
         

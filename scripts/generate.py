@@ -89,24 +89,33 @@ def make_index(data, records):
     for p in planes:
         lat, lon = p.get("latitude"), p.get("longitude")
         if not lat or not lon: continue
-        alt = p.get("baro_altitude") or p.get("geo_altitude") or 0
+        alt = p.get("altitude") or 0
+        geo = p.get("geo_altitude") or 0
         vel = p.get("velocity") or 0
-        trk = p.get("true_track") or 0
+        trk = p.get("track") or 0
+        vrate = p.get("vertical_rate") or 0
+        sq = p.get("squawk") or None
         cs = p.get("callsign","").strip() or "N/A"
         icao = p.get("icao24","").strip()
         og = p.get("on_ground", False)
-        pjs.append({"lat":lat,"lon":lon,"alt":alt,"vel":vel,"trk":trk,"cs":cs,"icao":icao,"og":og})
+        country = p.get("origin_country","").strip() or "-"
+        pjs.append({"lat":lat,"lon":lon,"alt":alt,"geo":geo,"vel":vel,"trk":trk,"vrate":vrate,"sq":sq,"cs":cs,"icao":icao,"og":og,"country":country})
 
     # table rows
     rows = ""
     for p in planes:
         cs = p.get("callsign","").strip() or "-"
         icao = p.get("icao24","").strip()
-        alt = p.get("baro_altitude") or p.get("geo_altitude") or 0
+        alt = p.get("altitude") or 0
+        geo = p.get("geo_altitude") or alt or 0
         vel = p.get("velocity") or 0
-        trk = p.get("true_track") or 0
+        trk = p.get("track") or 0
+        vrate = p.get("vertical_rate")
+        vrate_str = f"{vrate:.1f}" if vrate is not None else "-"
+        sq = p.get("squawk") or "-"
+        country = p.get("origin_country","").strip() or "-"
         og = "地面" if p.get("on_ground") else "空中"
-        rows += f'<tr><td>{cs}</td><td>{icao}</td><td>{alt:.0f}</td><td>{vel:.0f}</td><td>{trk:.0f}°</td><td>{og}</td></tr>'
+        rows += f'<tr><td>{cs}</td><td>{icao}</td><td>{country}</td><td>{alt:.0f}</td><td>{geo:.0f}</td><td>{vel:.0f}</td><td>{trk:.0f}°</td><td>{vrate_str}</td><td>{sq}</td><td>{og}</td></tr>'
 
     # hourly bars
     hbars, hlabels = "", ""
@@ -182,7 +191,7 @@ tr:hover td{{background:#f5f5f7}}
 <div class="chart-box"><h3>近日峰值</h3><div class="bars">{dbars}</div><div class="bar-labels">{dlabels}</div></div>
 </div>
 <div class="chart-box"><h3>飞机列表</h3>
-<table><thead><tr><th>呼号</th><th>ICAO24</th><th>高度(m)</th><th>速度(m/s)</th><th>航向</th><th>状态</th></tr></thead><tbody>{rows}</tbody></table></div>
+<table><thead><tr><th>呼号</th><th>ICAO24</th><th>来源国</th><th>气压高度(m)</th><th>几何高度(m)</th><th>速度(m/s)</th><th>航向</th><th>升降率(m/s)</th><th>Squawk</th><th>状态</th></tr></thead><tbody>{rows}</tbody></table></div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -190,7 +199,7 @@ function unlock(){{crypto.subtle.digest("SHA-256",new TextEncoder().encode(docum
 var m=L.map("map").setView([37.94,114.84],11);
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{{z}}/{{y}}/{{x}}",{{attribution:'&copy; Esri',maxZoom:18}}).addTo(m);
 var planes={json.dumps(pjs,ensure_ascii=False)};
-planes.forEach(function(p){{var ic=L.divIcon({{html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">✈</div>',className:"",iconSize:[22,22],iconAnchor:[11,11]}});L.marker([p.lat,p.lon],{{icon:ic}}).addTo(m).bindPopup("<b>"+p.cs+"</b><br>高度:"+p.alt.toFixed(0)+"m<br>速度:"+p.vel.toFixed(0)+"m/s")}})
+planes.forEach(function(p){{var vr=p.vrate?p.vrate.toFixed(1):"-";var sq=p.sq||"-";var ic=L.divIcon({{html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">✈</div>',className:"",iconSize:[22,22],iconAnchor:[11,11]}});L.marker([p.lat,p.lon],{{icon:ic}}).addTo(m).bindPopup("<b>"+p.cs+"</b> ("+p.icao+")<br>来源国: "+p.country+"<br>气压高度: "+p.alt.toFixed(0)+"m | 几何高度: "+p.geo.toFixed(0)+"m<br>地速: "+p.vel.toFixed(0)+"m/s | 航向: "+p.trk.toFixed(0)+"°<br>升降率: "+vr+"m/s | Squawk: "+sq)}})
 </script></body></html>'''
 
     with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
