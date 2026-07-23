@@ -67,14 +67,14 @@ def make_index(data, records):
         t = r.get("timestamp","")
         if t: hourly[t[11:13]] = hourly.get(t[11:13],0) + len(r.get("planes",[]))
     hs = sorted(hourly.items())
-    hmax = max([v for _,v in hs], default=1)
+    hmax = max([v for _,v in hs], default=1) or 1
 
     daily = {}
     for r in records:
         d = r.get("timestamp","")[:10]
         daily[d] = max(daily.get(d,0), len(r.get("planes",[])))
     ds = sorted(daily.items())[-7:]
-    dmax = max([v for _,v in ds], default=1)
+    dmax = max([v for _,v in ds], default=1) or 1
 
     # plane markers JS
     pjs = []
