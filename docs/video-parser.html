@@ -232,7 +232,7 @@ footer span{margin:0 8px;color:#d2d2d7}
 
 <script>
 // ========== 配置 ==========
-const API_BASE = 'http://localhost:8080'; // parse-video 部署后修改此地址
+const API_BASE = 'https://winter-king-47bc.2968919667.workers.dev';
 
 // ========== 平台检测 ==========
 const PLATFORM_PATTERNS = {
@@ -334,7 +334,7 @@ async function parseVideo() {
   setLoading(true);
 
   try {
-    const apiUrl = `${API_BASE}/video/share/url/parse?url=${encodeURIComponent(url)}`;
+    const apiUrl = `${API_BASE}?url=${encodeURIComponent(url)}`;
     const response = await fetch(apiUrl);
 
     if (!response.ok) {
@@ -343,7 +343,12 @@ async function parseVideo() {
 
     const data = await response.json();
 
-    if (!data.video_url) {
+    // Worker 返回的 error 字段
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    if (!data.video_url && (!data.images || data.images.length === 0)) {
       throw new Error('未获取到视频地址');
     }
 
