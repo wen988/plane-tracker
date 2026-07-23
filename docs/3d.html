@@ -1,8 +1,8 @@
 <!DOCTYPE html><html lang="zh-CN"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="robots" content="noindex">
 <title>3D地球 · 飞行轨迹</title>
-<script src="https://unpkg.com/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Cesium.js"></script>
+<link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Widgets/widgets.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a0a0f;color:#e0e0e0;overflow:hidden}
@@ -33,33 +33,33 @@ nav a.on{background:#0071e3;color:#fff}
   <span id="loadStatus" style="color:#86868b">加载中...</span>
 </div>
 <div class="empty-msg" id="emptyMsg">
-  <div class="icon">🛰</div>
+  <div class="icon">🛰️</div>
   <div class="txt">当前无追踪数据</div>
 </div>
 <script>
 var viewer, handler, planeEntities=[], planeData=[];
 
 function createPlaneCanvas(headingDeg){
-  var c=document.createElement('canvas');c.width=36;c.height=36;
+  var c=document.createElement('canvas');c.width=40;c.height=40;
   var ctx=c.getContext('2d');
   ctx.save();
-  ctx.translate(18,18);
+  ctx.translate(20,20);
   ctx.rotate(headingDeg*Math.PI/180);
   ctx.beginPath();
-  ctx.moveTo(0,-16);
-  ctx.lineTo(-8,12);
-  ctx.lineTo(-2,8);
-  ctx.lineTo(0,10);
-  ctx.lineTo(2,8);
-  ctx.lineTo(8,12);
+  ctx.moveTo(0,-18);
+  ctx.lineTo(-9,14);
+  ctx.lineTo(-2,9);
+  ctx.lineTo(0,12);
+  ctx.lineTo(2,9);
+  ctx.lineTo(9,14);
   ctx.closePath();
   ctx.fillStyle='#ff6b35';
   ctx.fill();
   ctx.strokeStyle='#ff4500';
-  ctx.lineWidth=1.5;
+  ctx.lineWidth=2;
   ctx.stroke();
   ctx.restore();
-  ctx.beginPath();ctx.arc(18,18,4,0,2*Math.PI);ctx.fillStyle='#00d4ff';ctx.fill();
+  ctx.beginPath();ctx.arc(20,20,5,0,2*Math.PI);ctx.fillStyle='#00d4ff';ctx.fill();
   return c.toDataURL();
 }
 
@@ -68,15 +68,12 @@ function initCesium(){
   viewer=new Cesium.Viewer('cesiumContainer',{
     animation:false,timeline:false,baseLayerPicker:false,fullscreenButton:false,
     homeButton:false,sceneModePicker:false,navigationHelpButton:false,geocoder:false,
-    infoBox:false,selectionIndicator:false,shadows:false,
-    imageryProvider:new Cesium.OpenStreetMapImageryProvider({
-      url:'https://tile.openstreetmap.org/'
-    })
+    infoBox:false,selectionIndicator:false,shadows:false
   });
   viewer.scene.skyAtmosphere.brightnessShift=-0.2;
   viewer.scene.backgroundColor=Cesium.Color.fromCssColorString('#0a0a0f');
-  viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(114.84,37.94,180000),
-    orientation:{heading:Cesium.Math.toRadians(0),pitch:Cesium.Math.toRadians(-45),roll:0}});
+  viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(114.84,37.94,250000),
+    orientation:{heading:Cesium.Math.toRadians(0),pitch:Cesium.Math.toRadians(-60),roll:0}});
 }
 
 function clearPlanes(){
@@ -85,16 +82,17 @@ function clearPlanes(){
 }
 
 function addPlane(p){
-  var alt=p.geo_altitude||p.altitude||0;
+  var alt=(p.geo_altitude||p.altitude||4000);
   var trk=p.track||0;
   var img=createPlaneCanvas(trk);
   var entity=viewer.entities.add({
     position:Cesium.Cartesian3.fromDegrees(p.longitude,p.latitude,alt),
     billboard:{image:img,width:32,height:32,verticalOrigin:Cesium.VerticalOrigin.CENTER,
-      horizontalOrigin:Cesium.HorizontalOrigin.CENTER,pixelOffsetScaleByDistance:new Cesium.NearFarScalar(1e4,1,1e6,.3)},
-    label:{text:p.callsign||p.icao24||'N/A',font:'10px sans-serif',fillColor:Cesium.Color.WHITE,
-      outlineColor:Cesium.Color.BLACK,outlineWidth:2,verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
-      pixelOffset:new Cesium.Cartesian2(0,-18),pixelOffsetScaleByDistance:new Cesium.NearFarScalar(1e4,1,5e5,0)},
+      horizontalOrigin:Cesium.HorizontalOrigin.CENTER,pixelOffsetScaleByDistance:new Cesium.NearFarScalar(1e4,1,1e6,.2)},
+    label:{text:(p.callsign||'').trim()||p.icao24||'N/A',font:'12px Microsoft YaHei,sans-serif',
+      fillColor:Cesium.Color.WHITE,outlineColor:Cesium.Color.BLACK,outlineWidth:2,
+      verticalOrigin:Cesium.VerticalOrigin.BOTTOM,pixelOffset:new Cesium.Cartesian2(0,-20),
+      pixelOffsetScaleByDistance:new Cesium.NearFarScalar(1e4,1,5e5,0)},
     properties:{
       callsign:p.callsign||'N/A',icao24:p.icao24||'-',country:p.origin_country||'-',
       alt:p.altitude||0,geo_alt:p.geo_altitude||0,vel:p.velocity||0,trk:trk,
@@ -106,10 +104,11 @@ function addPlane(p){
 }
 
 function loadPlanes(){
+  document.getElementById('loadStatus').textContent='加载中...';
   fetch('data/latest.json')
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
     .then(function(d){
-      var planes=d.planes||[];
+      var planes=(d&&d.planes)||[];
       clearPlanes();
       if(planes.length===0){
         document.getElementById('emptyMsg').style.display='block';
@@ -118,10 +117,10 @@ function loadPlanes(){
         return;
       }
       document.getElementById('emptyMsg').style.display='none';
-      planes.forEach(function(p){addPlane(p);});
+      planes.forEach(function(p){if(p.latitude!=null&&p.longitude!=null)addPlane(p);});
       document.getElementById('planeCount').textContent=planes.length;
       document.getElementById('loadStatus').textContent='已加载 '+planes.length+' 架飞机';
-      viewer.zoomTo(viewer.entities);
+      if(planeEntities.length>0)viewer.zoomTo(viewer.entities);
     })
     .catch(function(e){
       document.getElementById('emptyMsg').style.display='block';
@@ -140,10 +139,10 @@ function setupClick(){
       var alt=p.alt.getValue(),geo=p.geo_alt.getValue(),vel=p.vel.getValue();
       var trk=p.trk.getValue(),vr=p.vrate.getValue(),sq=p.sq.getValue(),og=p.og.getValue();
       var vrStr=vr!=null?vr.toFixed(1):'-';
-      picked.id.description='<div style="color:#e0e0e0;font-family:sans-serif;padding:8px">'+
+      picked.id.description='<div style="color:#e0e0e0;font-family:Microsoft YaHei,sans-serif;padding:8px">'+
         '<b style="font-size:16px;color:#ff6b35">'+cs+'</b> <span style="color:#86868b">('+icao+')</span><br>'+
         '来源国: '+cty+'<br>气压高度: '+alt.toFixed(0)+'m | 几何高度: '+geo.toFixed(0)+'m<br>'+
-        '地速: '+vel.toFixed(0)+'m/s | 航向: '+trk.toFixed(0)+'°<br>升降率: '+vrStr+'m/s | Squawk: '+sq+'<br>状态: '+og+'</div>';
+        '地速: '+vel.toFixed(0)+'m/s | 航向: '+trk.toFixed(0)+'&deg;<br>升降率: '+vrStr+'m/s | Squawk: '+sq+'<br>状态: '+og+'</div>';
       viewer.selectedEntity=picked.id;
     }
   },Cesium.ScreenSpaceEventType.LEFT_CLICK);
