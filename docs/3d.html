@@ -64,11 +64,11 @@ function createPlaneCanvas(headingDeg){
 }
 
 function initCesium(){
-  Cesium.Ion.defaultAccessToken='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzciLCJpZCI6MjU5LCJpYXQiOjE2OTQyMDA3NTZ9.SomeDefaultToken';
   viewer=new Cesium.Viewer('cesiumContainer',{
     animation:false,timeline:false,baseLayerPicker:false,fullscreenButton:false,
     homeButton:false,sceneModePicker:false,navigationHelpButton:false,geocoder:false,
-    infoBox:false,selectionIndicator:false,shadows:false
+    infoBox:false,selectionIndicator:false,shadows:false,
+    imageryProvider:new Cesium.OpenStreetMapImageryProvider({url:'https://tile.openstreetmap.org/'})
   });
   viewer.scene.skyAtmosphere.brightnessShift=-0.2;
   viewer.scene.backgroundColor=Cesium.Color.fromCssColorString('#0a0a0f');
