@@ -1,72 +1,143 @@
 <!DOCTYPE html>
-<!-- build: 2026-07-23-c2 --><html lang="zh-CN"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="robots" content="noindex">
-<title>藁城上空 · 飞机追踪 | 单反的雷达站</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f7;color:#1d1d1f}
-.lock{position:fixed;inset:0;background:rgba(245,245,247,.97);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(20px)}
-.lock input{padding:12px 20px;border-radius:12px;border:1.5px solid #d2d2d7;background:#fff;font-size:16px;width:260px;text-align:center;outline:none}
-.lock input:focus{border-color:#0071e3}
-.lock button{margin-top:10px;padding:10px 36px;border-radius:20px;border:none;background:#0071e3;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
-.lock .err{color:#ff3b30;font-size:13px;margin-top:8px;display:none}
-nav{display:flex;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);padding:12px 24px;border-bottom:1px solid #d2d2d7;position:sticky;top:0;z-index:100}
-nav a{padding:8px 20px;border-radius:8px;color:#86868b;text-decoration:none;font-size:14px;font-weight:500;margin-right:4px}
-nav a:hover{background:rgba(0,0,0,.04);color:#1d1d1f}
-nav a.on{background:#0071e3;color:#fff}
-.container{max-width:1200px;margin:0 auto;padding:24px}
-.header{margin-bottom:20px}
-.header h1{font-size:28px;font-weight:700}
-.header .ts{font-size:13px;color:#86868b;margin-top:4px}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-.card .num{font-size:36px;font-weight:700;color:#0071e3}
-.card .lbl{font-size:13px;color:#86868b;margin-top:4px}
-.wxbar{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:16px 20px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-.wxbar span{font-size:14px;color:#1d1d1f}
-.wxbar b{color:#0071e3}
-#map{height:420px;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:20px}
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.chart-box{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-.chart-box h3{font-size:15px;font-weight:600;margin-bottom:16px;color:#1d1d1f}
-.bars{display:flex;align-items:flex-end;gap:2px;height:100px}
-.bars .bar{flex:1;background:#0071e3;border-radius:3px 3px 0 0;min-height:2px;position:relative}
-.bars .bar:hover{background:#2997ff}
-.bars .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap}
-.bars .bar:hover .tip{display:block}
-.bar-labels{display:flex;gap:2px;margin-top:6px}
-.bar-labels span{flex:1;font-size:10px;color:#86868b;text-align:center;overflow:hidden}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:10px 12px;color:#86868b;font-weight:500;border-bottom:1px solid #e5e5ea}
-td{padding:10px 12px;border-bottom:1px solid #f5f5f7}
-tr:hover td{background:#f5f5f7}
-</style></head><body>
-<div class="lock" id="lock"><div style="font-size:40px;margin-bottom:8px">馃洶</div>
-<div style="font-size:15px;color:#86868b;margin-bottom:16px">钘佸煄涓婄┖椋炴満杩借釜</div>
-<input type="password" id="pw" placeholder="杈撳叆瀵嗙爜" onkeydown="if(event.key==='Enter')unlock()">
-<button onclick="unlock()">瑙ｉ攣</button><div class="err" id="err">瀵嗙爜閿欒</div></div>
-<nav><a class="on" href="index.html">椋炴満杩借釜</a><a href="weather.html">姘旇薄浠〃鐩?/a><a href="3d.html">3D鍦扮悆</a><a href="replay.html">鍘嗗彶鍥炴斁</a><a href="space.html">澶┖杩囧</a><a href="dashboard.html">鏁版嵁澶у睆</a></nav>
-<div class="container">
-<div class="header"><h1>钘佸煄涓婄┖椋炴満杩借釜</h1><div class="ts">鏇存柊浜?07鏈?3鏃?20:20</div></div>
-<div class="stats"><div class="card"><div class="num">26</div><div class="lbl">杩借釜椋炴満</div></div>
-<div class="card"><div class="num">26</div><div class="lbl">绌轰腑椋炶</div></div>
-<div class="card"><div class="num">0</div><div class="lbl">鍦伴潰鍋滄斁</div></div>
-<div class="card"><div class="num">24</div><div class="lbl">鏈夊懠鍙?/div></div></div>
-<div class="wxbar"><span>澶╂皵 <b>澶氫簯</b></span><span>娓╁害 <b>25.2掳C</b></span><span>婀垮害 <b>82%</b></span><span>椋庨€?<b>5.2 m/s</b></span></div>
-<div id="map"></div>
-<div class="charts">
-<div class="chart-box"><h3>鍚勬椂娈甸鏈洪噺</h3><div class="bars"><div class="bar" style="height:0.0%"><span class="tip">00鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">01鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">02鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">03鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">07鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">11鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">14鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">15鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">16鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">17鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">18鏃?0鏋?/span></div><div class="bar" style="height:100.0%"><span class="tip">19鏃?146鏋?/span></div><div class="bar" style="height:17.80821917808219%"><span class="tip">20鏃?26鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">22鏃?0鏋?/span></div></div><div class="bar-labels"><span>00</span><span>01</span><span>02</span><span>03</span><span>07</span><span>11</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>22</span></div></div>
-<div class="chart-box"><h3>杩戞棩宄板€?/h3><div class="bars"><div class="bar" style="height:0.0%"><span class="tip">2026-07-22: 0鏋?/span></div><div class="bar" style="height:100.0%"><span class="tip">2026-07-23: 28鏋?/span></div></div><div class="bar-labels"><span>07-22</span><span>07-23</span></div></div>
-</div>
-<div class="chart-box"><h3>椋炴満鍒楄〃</h3>
-<table><thead><tr><th>鍛煎彿</th><th>ICAO24</th><th>鏉ユ簮鍥?/th><th>姘斿帇楂樺害(m)</th><th>鍑犱綍楂樺害(m)</th><th>閫熷害(m/s)</th><th>鑸悜</th><th>鍗囬檷鐜?m/s)</th><th>Squawk</th><th>鐘舵€?/th></tr></thead><tbody><tr><td>CSN6310</td><td>78213f</td><td>China</td><td>9479</td><td>9967</td><td>256</td><td>12掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1374</td><td>7820dd</td><td>China</td><td>1852</td><td>1867</td><td>101</td><td>102掳</td><td>-4.9</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSN6377</td><td>78228b</td><td>China</td><td>9784</td><td>10310</td><td>209</td><td>200掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA4110</td><td>782360</td><td>China</td><td>9784</td><td>10264</td><td>212</td><td>201掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CHH6362</td><td>782376</td><td>China</td><td>1577</td><td>1745</td><td>112</td><td>100掳</td><td>-5.2</td><td>-</td><td>绌轰腑</td></tr><tr><td>LKE9987</td><td>782305</td><td>China</td><td>4336</td><td>4488</td><td>178</td><td>94掳</td><td>-4.2</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSC8898</td><td>781014</td><td>China</td><td>10058</td><td>9853</td><td>216</td><td>201掳</td><td>11.4</td><td>-</td><td>绌轰腑</td></tr><tr><td>CQH6731</td><td>781bb5</td><td>China</td><td>9174</td><td>9639</td><td>233</td><td>351掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CDG4994</td><td>781bd2</td><td>China</td><td>6888</td><td>7186</td><td>213</td><td>94掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSC8463</td><td>78112e</td><td>China</td><td>10698</td><td>11255</td><td>255</td><td>3掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSC8895</td><td>78112c</td><td>China</td><td>5083</td><td>5281</td><td>186</td><td>353掳</td><td>-1.3</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSZ9119</td><td>780b1e</td><td>China</td><td>4770</td><td>4938</td><td>199</td><td>276掳</td><td>10.1</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1931</td><td>781dd6</td><td>China</td><td>6347</td><td>6622</td><td>212</td><td>298掳</td><td>9.4</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA4173</td><td>781dd8</td><td>China</td><td>3063</td><td>3139</td><td>153</td><td>168掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1392</td><td>7811a3</td><td>China</td><td>3932</td><td>4061</td><td>160</td><td>26掳</td><td>-6.2</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1486</td><td>780069</td><td>China</td><td>2377</td><td>2416</td><td>146</td><td>92掳</td><td>-4.9</td><td>-</td><td>绌轰腑</td></tr><tr><td>-</td><td>781303</td><td>China</td><td>8405</td><td>8832</td><td>219</td><td>253掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>JYH1582</td><td>78133f</td><td>China</td><td>11003</td><td>11598</td><td>204</td><td>187掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>FZA6748</td><td>7812ab</td><td>China</td><td>9784</td><td>10295</td><td>213</td><td>215掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>-</td><td>780d80</td><td>China</td><td>3566</td><td>3650</td><td>157</td><td>7掳</td><td>12.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CHH7813</td><td>780e2e</td><td>China</td><td>11537</td><td>12093</td><td>216</td><td>189掳</td><td>4.2</td><td>-</td><td>绌轰腑</td></tr><tr><td>CHH7133</td><td>78027d</td><td>China</td><td>8412</td><td>8801</td><td>218</td><td>273掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA179</td><td>780dfe</td><td>China</td><td>9266</td><td>9708</td><td>215</td><td>243掳</td><td>5.5</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1953</td><td>780524</td><td>China</td><td>9784</td><td>10249</td><td>208</td><td>203掳</td><td>-0.3</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSZ9118</td><td>780751</td><td>China</td><td>7696</td><td>8054</td><td>217</td><td>243掳</td><td>7.8</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1305</td><td>7808cc</td><td>China</td><td>10462</td><td>10729</td><td>220</td><td>204掳</td><td>7.8</td><td>-</td><td>绌轰腑</td></tr></tbody></table></div>
-</div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-function unlock(){crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x=="ed9b7dfe821ab674871bc9244d80bae4e8d6dbe5122f34247b8c2854e6cc525e")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"})}
-var m=L.map("map").setView([37.94,114.84],11);
-L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{attribution:'&copy; Esri',maxZoom:18}).addTo(m);
-var planes=[{"lat": 39.799, "lon": 116.8317, "alt": 9479.28, "geo": 9966.96, "vel": 256.18, "trk": 12.05, "vrate": 0, "sq": null, "cs": "CSN6310", "icao": "78213f", "og": false, "country": "China"}, {"lat": 40.3729, "lon": 116.436, "alt": 1851.66, "geo": 1866.9, "vel": 101.11, "trk": 102.34, "vrate": -4.88, "sq": null, "cs": "CCA1374", "icao": "7820dd", "og": false, "country": "China"}, {"lat": 39.552, "lon": 116.7381, "alt": 9784.08, "geo": 10309.86, "vel": 209.12, "trk": 200, "vrate": 0, "sq": null, "cs": "CSN6377", "icao": "78228b", "og": false, "country": "China"}, {"lat": 39.1219, "lon": 114.1614, "alt": 9784.08, "geo": 10264.14, "vel": 212.38, "trk": 201.16, "vrate": 0, "sq": null, "cs": "CCA4110", "icao": "782360", "og": false, "country": "China"}, {"lat": 40.3924, "lon": 116.4199, "alt": 1577.34, "geo": 1744.98, "vel": 112.23, "trk": 99.76, "vrate": -5.2, "sq": null, "cs": "CHH6362", "icao": "782376", "og": false, "country": "China"}, {"lat": 40.4455, "lon": 115.306, "alt": 4335.78, "geo": 4488.18, "vel": 178.46, "trk": 94.13, "vrate": -4.23, "sq": null, "cs": "LKE9987", "icao": "782305", "og": false, "country": "China"}, {"lat": 39.0465, "lon": 114.1236, "alt": 10058.4, "geo": 9852.66, "vel": 215.52, "trk": 201.42, "vrate": 11.38, "sq": null, "cs": "CSC8898", "icao": "781014", "og": false, "country": "China"}, {"lat": 40.0217, "lon": 116.8103, "alt": 9174.48, "geo": 9639.3, "vel": 232.68, "trk": 351.22, "vrate": 0, "sq": null, "cs": "CQH6731", "icao": "781bb5", "og": false, "country": "China"}, {"lat": 40.4793, "lon": 114.6096, "alt": 6888.48, "geo": 7185.66, "vel": 212.89, "trk": 93.6, "vrate": 0, "sq": null, "cs": "CDG4994", "icao": "781bd2", "og": false, "country": "China"}, {"lat": 39.831, "lon": 116.8346, "alt": 10698.48, "geo": 11254.74, "vel": 255.49, "trk": 2.89, "vrate": 0, "sq": null, "cs": "CSC8463", "icao": "78112e", "og": false, "country": "China"}, {"lat": 39.8077, "lon": 116.082, "alt": 5082.54, "geo": 5280.66, "vel": 185.94, "trk": 353.33, "vrate": -1.3, "sq": null, "cs": "CSC8895", "icao": "78112c", "og": false, "country": "China"}, {"lat": 39.7278, "lon": 115.878, "alt": 4770.12, "geo": 4937.76, "vel": 198.62, "trk": 275.95, "vrate": 10.08, "sq": null, "cs": "CSZ9119", "icao": "780b1e", "og": false, "country": "China"}, {"lat": 39.6994, "lon": 115.5969, "alt": 6347.46, "geo": 6621.78, "vel": 212.44, "trk": 298.18, "vrate": 9.43, "sq": null, "cs": "CCA1931", "icao": "781dd6", "og": false, "country": "China"}, {"lat": 40.3118, "lon": 115.735, "alt": 3063.24, "geo": 3139.44, "vel": 152.85, "trk": 168.35, "vrate": 0, "sq": null, "cs": "CCA4173", "icao": "781dd8", "og": false, "country": "China"}, {"lat": 40.1044, "lon": 116.0924, "alt": 3931.92, "geo": 4061.46, "vel": 160.36, "trk": 26.07, "vrate": -6.18, "sq": null, "cs": "CCA1392", "icao": "7811a3", "og": false, "country": "China"}, {"lat": 40.4069, "lon": 116.177, "alt": 2377.44, "geo": 2415.54, "vel": 145.66, "trk": 91.82, "vrate": -4.88, "sq": null, "cs": "CCA1486", "icao": "780069", "og": false, "country": "China"}, {"lat": 39.0169, "lon": 115.8068, "alt": 8404.86, "geo": 8831.58, "vel": 218.88, "trk": 253.06, "vrate": 0, "sq": null, "cs": "N/A", "icao": "781303", "og": false, "country": "China"}, {"lat": 39.2305, "lon": 116.7606, "alt": 11003.28, "geo": 11597.64, "vel": 203.81, "trk": 187.25, "vrate": 0, "sq": null, "cs": "JYH1582", "icao": "78133f", "og": false, "country": "China"}, {"lat": 39.1126, "lon": 116.4974, "alt": 9784.08, "geo": 10294.62, "vel": 213.34, "trk": 214.69, "vrate": 0, "sq": null, "cs": "FZA6748", "icao": "7812ab", "og": false, "country": "China"}, {"lat": 40.2056, "lon": 116.8398, "alt": 3566.16, "geo": 3649.98, "vel": 156.59, "trk": 7.17, "vrate": 12.03, "sq": null, "cs": "N/A", "icao": "780d80", "og": false, "country": "China"}, {"lat": 38.8781, "lon": 114.1943, "alt": 11536.68, "geo": 12092.94, "vel": 215.92, "trk": 189.46, "vrate": 4.23, "sq": null, "cs": "CHH7813", "icao": "780e2e", "og": false, "country": "China"}, {"lat": 40.1281, "lon": 114.521, "alt": 8412.48, "geo": 8801.1, "vel": 217.93, "trk": 273.11, "vrate": 0, "sq": null, "cs": "CHH7133", "icao": "78027d", "og": false, "country": "China"}, {"lat": 39.4938, "lon": 114.7775, "alt": 9265.92, "geo": 9707.88, "vel": 214.9, "trk": 242.64, "vrate": 5.53, "sq": null, "cs": "CCA179", "icao": "780dfe", "og": false, "country": "China"}, {"lat": 39.0957, "lon": 114.4437, "alt": 9784.08, "geo": 10248.9, "vel": 207.72, "trk": 202.88, "vrate": -0.33, "sq": null, "cs": "CCA1953", "icao": "780524", "og": false, "country": "China"}, {"lat": 39.6274, "lon": 115.1103, "alt": 7696.2, "geo": 8054.34, "vel": 216.51, "trk": 242.7, "vrate": 7.8, "sq": null, "cs": "CSZ9118", "icao": "780751", "og": false, "country": "China"}, {"lat": 39.352, "lon": 114.597, "alt": 10462.26, "geo": 10728.96, "vel": 219.75, "trk": 203.74, "vrate": 7.8, "sq": null, "cs": "CCA1305", "icao": "7808cc", "og": false, "country": "China"}];
-planes.forEach(function(p){var vr=p.vrate?p.vrate.toFixed(1):"-";var sq=p.sq||"-";var ic=L.divIcon({html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">鉁?/div>',className:"",iconSize:[22,22],iconAnchor:[11,11]});L.marker([p.lat,p.lon],{icon:ic}).addTo(m).bindPopup("<b>"+p.cs+"</b> ("+p.icao+")<br>鏉ユ簮鍥? "+p.country+"<br>姘斿帇楂樺害: "+p.alt.toFixed(0)+"m | 鍑犱綍楂樺害: "+p.geo.toFixed(0)+"m<br>鍦伴€? "+p.vel.toFixed(0)+"m/s | 鑸悜: "+p.trk.toFixed(0)+"掳<br>鍗囬檷鐜? "+vr+"m/s | Squawk: "+sq)})
-</script></body></html>
+<!-- build: 2026-07-23-c2 --><html lang="zh-CN"><head>
+
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="robots" content="noindex">
+
+<title>藁城上空 · 飞机追踪 | 单反的雷达站</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f7;color:#1d1d1f}
+
+.lock{position:fixed;inset:0;background:rgba(245,245,247,.97);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(20px)}
+
+.lock input{padding:12px 20px;border-radius:12px;border:1.5px solid #d2d2d7;background:#fff;font-size:16px;width:260px;text-align:center;outline:none}
+
+.lock input:focus{border-color:#0071e3}
+
+.lock button{margin-top:10px;padding:10px 36px;border-radius:20px;border:none;background:#0071e3;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+
+.lock .err{color:#ff3b30;font-size:13px;margin-top:8px;display:none}
+
+nav{display:flex;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);padding:12px 24px;border-bottom:1px solid #d2d2d7;position:sticky;top:0;z-index:100}
+
+nav a{padding:8px 20px;border-radius:8px;color:#86868b;text-decoration:none;font-size:14px;font-weight:500;margin-right:4px}
+
+nav a:hover{background:rgba(0,0,0,.04);color:#1d1d1f}
+
+nav a.on{background:#0071e3;color:#fff}
+
+.container{max-width:1200px;margin:0 auto;padding:24px}
+
+.header{margin-bottom:20px}
+
+.header h1{font-size:28px;font-weight:700}
+
+.header .ts{font-size:13px;color:#86868b;margin-top:4px}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+
+.card .num{font-size:36px;font-weight:700;color:#0071e3}
+
+.card .lbl{font-size:13px;color:#86868b;margin-top:4px}
+
+.wxbar{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:16px 20px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+
+.wxbar span{font-size:14px;color:#1d1d1f}
+
+.wxbar b{color:#0071e3}
+
+#map{height:420px;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:20px}
+
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+
+.chart-box{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+
+.chart-box h3{font-size:15px;font-weight:600;margin-bottom:16px;color:#1d1d1f}
+
+.bars{display:flex;align-items:flex-end;gap:2px;height:100px}
+
+.bars .bar{flex:1;background:#0071e3;border-radius:3px 3px 0 0;min-height:2px;position:relative}
+
+.bars .bar:hover{background:#2997ff}
+
+.bars .bar .tip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap}
+
+.bars .bar:hover .tip{display:block}
+
+.bar-labels{display:flex;gap:2px;margin-top:6px}
+
+.bar-labels span{flex:1;font-size:10px;color:#86868b;text-align:center;overflow:hidden}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+
+th{text-align:left;padding:10px 12px;color:#86868b;font-weight:500;border-bottom:1px solid #e5e5ea}
+
+td{padding:10px 12px;border-bottom:1px solid #f5f5f7}
+
+tr:hover td{background:#f5f5f7}
+
+</style></head><body>
+
+<div class="lock" id="lock"><div style="font-size:40px;margin-bottom:8px">馃洶</div>
+
+<div style="font-size:15px;color:#86868b;margin-bottom:16px">钘佸煄涓婄┖椋炴満杩借釜</div>
+
+<input type="password" id="pw" placeholder="杈撳叆瀵嗙爜" onkeydown="if(event.key==='Enter')unlock()">
+
+<button onclick="unlock()">瑙ｉ攣</button><div class="err" id="err">瀵嗙爜閿欒</div></div>
+
+<nav><a class="on" href="index.html">椋炴満杩借釜</a><a href="weather.html">姘旇薄浠〃鐩?/a><a href="3d.html">3D鍦扮悆</a><a href="replay.html">鍘嗗彶鍥炴斁</a><a href="space.html">澶┖杩囧</a><a href="dashboard.html">鏁版嵁澶у睆</a><a href="tarot.html">塔罗占卜</a></nav>
+
+<div class="container">
+
+<div class="header"><h1>钘佸煄涓婄┖椋炴満杩借釜</h1><div class="ts">鏇存柊浜?07鏈?3鏃?20:20</div></div>
+
+<div class="stats"><div class="card"><div class="num">26</div><div class="lbl">杩借釜椋炴満</div></div>
+
+<div class="card"><div class="num">26</div><div class="lbl">绌轰腑椋炶</div></div>
+
+<div class="card"><div class="num">0</div><div class="lbl">鍦伴潰鍋滄斁</div></div>
+
+<div class="card"><div class="num">24</div><div class="lbl">鏈夊懠鍙?/div></div></div>
+
+<div class="wxbar"><span>澶╂皵 <b>澶氫簯</b></span><span>娓╁害 <b>25.2掳C</b></span><span>婀垮害 <b>82%</b></span><span>椋庨€?<b>5.2 m/s</b></span></div>
+
+<div id="map"></div>
+
+<div class="charts">
+
+<div class="chart-box"><h3>鍚勬椂娈甸鏈洪噺</h3><div class="bars"><div class="bar" style="height:0.0%"><span class="tip">00鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">01鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">02鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">03鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">07鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">11鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">14鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">15鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">16鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">17鏃?0鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">18鏃?0鏋?/span></div><div class="bar" style="height:100.0%"><span class="tip">19鏃?146鏋?/span></div><div class="bar" style="height:17.80821917808219%"><span class="tip">20鏃?26鏋?/span></div><div class="bar" style="height:0.0%"><span class="tip">22鏃?0鏋?/span></div></div><div class="bar-labels"><span>00</span><span>01</span><span>02</span><span>03</span><span>07</span><span>11</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>22</span></div></div>
+
+<div class="chart-box"><h3>杩戞棩宄板€?/h3><div class="bars"><div class="bar" style="height:0.0%"><span class="tip">2026-07-22: 0鏋?/span></div><div class="bar" style="height:100.0%"><span class="tip">2026-07-23: 28鏋?/span></div></div><div class="bar-labels"><span>07-22</span><span>07-23</span></div></div>
+
+</div>
+
+<div class="chart-box"><h3>椋炴満鍒楄〃</h3>
+
+<table><thead><tr><th>鍛煎彿</th><th>ICAO24</th><th>鏉ユ簮鍥?/th><th>姘斿帇楂樺害(m)</th><th>鍑犱綍楂樺害(m)</th><th>閫熷害(m/s)</th><th>鑸悜</th><th>鍗囬檷鐜?m/s)</th><th>Squawk</th><th>鐘舵€?/th></tr></thead><tbody><tr><td>CSN6310</td><td>78213f</td><td>China</td><td>9479</td><td>9967</td><td>256</td><td>12掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1374</td><td>7820dd</td><td>China</td><td>1852</td><td>1867</td><td>101</td><td>102掳</td><td>-4.9</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSN6377</td><td>78228b</td><td>China</td><td>9784</td><td>10310</td><td>209</td><td>200掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA4110</td><td>782360</td><td>China</td><td>9784</td><td>10264</td><td>212</td><td>201掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CHH6362</td><td>782376</td><td>China</td><td>1577</td><td>1745</td><td>112</td><td>100掳</td><td>-5.2</td><td>-</td><td>绌轰腑</td></tr><tr><td>LKE9987</td><td>782305</td><td>China</td><td>4336</td><td>4488</td><td>178</td><td>94掳</td><td>-4.2</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSC8898</td><td>781014</td><td>China</td><td>10058</td><td>9853</td><td>216</td><td>201掳</td><td>11.4</td><td>-</td><td>绌轰腑</td></tr><tr><td>CQH6731</td><td>781bb5</td><td>China</td><td>9174</td><td>9639</td><td>233</td><td>351掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CDG4994</td><td>781bd2</td><td>China</td><td>6888</td><td>7186</td><td>213</td><td>94掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSC8463</td><td>78112e</td><td>China</td><td>10698</td><td>11255</td><td>255</td><td>3掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSC8895</td><td>78112c</td><td>China</td><td>5083</td><td>5281</td><td>186</td><td>353掳</td><td>-1.3</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSZ9119</td><td>780b1e</td><td>China</td><td>4770</td><td>4938</td><td>199</td><td>276掳</td><td>10.1</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1931</td><td>781dd6</td><td>China</td><td>6347</td><td>6622</td><td>212</td><td>298掳</td><td>9.4</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA4173</td><td>781dd8</td><td>China</td><td>3063</td><td>3139</td><td>153</td><td>168掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1392</td><td>7811a3</td><td>China</td><td>3932</td><td>4061</td><td>160</td><td>26掳</td><td>-6.2</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1486</td><td>780069</td><td>China</td><td>2377</td><td>2416</td><td>146</td><td>92掳</td><td>-4.9</td><td>-</td><td>绌轰腑</td></tr><tr><td>-</td><td>781303</td><td>China</td><td>8405</td><td>8832</td><td>219</td><td>253掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>JYH1582</td><td>78133f</td><td>China</td><td>11003</td><td>11598</td><td>204</td><td>187掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>FZA6748</td><td>7812ab</td><td>China</td><td>9784</td><td>10295</td><td>213</td><td>215掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>-</td><td>780d80</td><td>China</td><td>3566</td><td>3650</td><td>157</td><td>7掳</td><td>12.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CHH7813</td><td>780e2e</td><td>China</td><td>11537</td><td>12093</td><td>216</td><td>189掳</td><td>4.2</td><td>-</td><td>绌轰腑</td></tr><tr><td>CHH7133</td><td>78027d</td><td>China</td><td>8412</td><td>8801</td><td>218</td><td>273掳</td><td>0.0</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA179</td><td>780dfe</td><td>China</td><td>9266</td><td>9708</td><td>215</td><td>243掳</td><td>5.5</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1953</td><td>780524</td><td>China</td><td>9784</td><td>10249</td><td>208</td><td>203掳</td><td>-0.3</td><td>-</td><td>绌轰腑</td></tr><tr><td>CSZ9118</td><td>780751</td><td>China</td><td>7696</td><td>8054</td><td>217</td><td>243掳</td><td>7.8</td><td>-</td><td>绌轰腑</td></tr><tr><td>CCA1305</td><td>7808cc</td><td>China</td><td>10462</td><td>10729</td><td>220</td><td>204掳</td><td>7.8</td><td>-</td><td>绌轰腑</td></tr></tbody></table></div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+function unlock(){crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x=="ed9b7dfe821ab674871bc9244d80bae4e8d6dbe5122f34247b8c2854e6cc525e")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"})}
+
+var m=L.map("map").setView([37.94,114.84],11);
+
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{attribution:'&copy; Esri',maxZoom:18}).addTo(m);
+
+var planes=[{"lat": 39.799, "lon": 116.8317, "alt": 9479.28, "geo": 9966.96, "vel": 256.18, "trk": 12.05, "vrate": 0, "sq": null, "cs": "CSN6310", "icao": "78213f", "og": false, "country": "China"}, {"lat": 40.3729, "lon": 116.436, "alt": 1851.66, "geo": 1866.9, "vel": 101.11, "trk": 102.34, "vrate": -4.88, "sq": null, "cs": "CCA1374", "icao": "7820dd", "og": false, "country": "China"}, {"lat": 39.552, "lon": 116.7381, "alt": 9784.08, "geo": 10309.86, "vel": 209.12, "trk": 200, "vrate": 0, "sq": null, "cs": "CSN6377", "icao": "78228b", "og": false, "country": "China"}, {"lat": 39.1219, "lon": 114.1614, "alt": 9784.08, "geo": 10264.14, "vel": 212.38, "trk": 201.16, "vrate": 0, "sq": null, "cs": "CCA4110", "icao": "782360", "og": false, "country": "China"}, {"lat": 40.3924, "lon": 116.4199, "alt": 1577.34, "geo": 1744.98, "vel": 112.23, "trk": 99.76, "vrate": -5.2, "sq": null, "cs": "CHH6362", "icao": "782376", "og": false, "country": "China"}, {"lat": 40.4455, "lon": 115.306, "alt": 4335.78, "geo": 4488.18, "vel": 178.46, "trk": 94.13, "vrate": -4.23, "sq": null, "cs": "LKE9987", "icao": "782305", "og": false, "country": "China"}, {"lat": 39.0465, "lon": 114.1236, "alt": 10058.4, "geo": 9852.66, "vel": 215.52, "trk": 201.42, "vrate": 11.38, "sq": null, "cs": "CSC8898", "icao": "781014", "og": false, "country": "China"}, {"lat": 40.0217, "lon": 116.8103, "alt": 9174.48, "geo": 9639.3, "vel": 232.68, "trk": 351.22, "vrate": 0, "sq": null, "cs": "CQH6731", "icao": "781bb5", "og": false, "country": "China"}, {"lat": 40.4793, "lon": 114.6096, "alt": 6888.48, "geo": 7185.66, "vel": 212.89, "trk": 93.6, "vrate": 0, "sq": null, "cs": "CDG4994", "icao": "781bd2", "og": false, "country": "China"}, {"lat": 39.831, "lon": 116.8346, "alt": 10698.48, "geo": 11254.74, "vel": 255.49, "trk": 2.89, "vrate": 0, "sq": null, "cs": "CSC8463", "icao": "78112e", "og": false, "country": "China"}, {"lat": 39.8077, "lon": 116.082, "alt": 5082.54, "geo": 5280.66, "vel": 185.94, "trk": 353.33, "vrate": -1.3, "sq": null, "cs": "CSC8895", "icao": "78112c", "og": false, "country": "China"}, {"lat": 39.7278, "lon": 115.878, "alt": 4770.12, "geo": 4937.76, "vel": 198.62, "trk": 275.95, "vrate": 10.08, "sq": null, "cs": "CSZ9119", "icao": "780b1e", "og": false, "country": "China"}, {"lat": 39.6994, "lon": 115.5969, "alt": 6347.46, "geo": 6621.78, "vel": 212.44, "trk": 298.18, "vrate": 9.43, "sq": null, "cs": "CCA1931", "icao": "781dd6", "og": false, "country": "China"}, {"lat": 40.3118, "lon": 115.735, "alt": 3063.24, "geo": 3139.44, "vel": 152.85, "trk": 168.35, "vrate": 0, "sq": null, "cs": "CCA4173", "icao": "781dd8", "og": false, "country": "China"}, {"lat": 40.1044, "lon": 116.0924, "alt": 3931.92, "geo": 4061.46, "vel": 160.36, "trk": 26.07, "vrate": -6.18, "sq": null, "cs": "CCA1392", "icao": "7811a3", "og": false, "country": "China"}, {"lat": 40.4069, "lon": 116.177, "alt": 2377.44, "geo": 2415.54, "vel": 145.66, "trk": 91.82, "vrate": -4.88, "sq": null, "cs": "CCA1486", "icao": "780069", "og": false, "country": "China"}, {"lat": 39.0169, "lon": 115.8068, "alt": 8404.86, "geo": 8831.58, "vel": 218.88, "trk": 253.06, "vrate": 0, "sq": null, "cs": "N/A", "icao": "781303", "og": false, "country": "China"}, {"lat": 39.2305, "lon": 116.7606, "alt": 11003.28, "geo": 11597.64, "vel": 203.81, "trk": 187.25, "vrate": 0, "sq": null, "cs": "JYH1582", "icao": "78133f", "og": false, "country": "China"}, {"lat": 39.1126, "lon": 116.4974, "alt": 9784.08, "geo": 10294.62, "vel": 213.34, "trk": 214.69, "vrate": 0, "sq": null, "cs": "FZA6748", "icao": "7812ab", "og": false, "country": "China"}, {"lat": 40.2056, "lon": 116.8398, "alt": 3566.16, "geo": 3649.98, "vel": 156.59, "trk": 7.17, "vrate": 12.03, "sq": null, "cs": "N/A", "icao": "780d80", "og": false, "country": "China"}, {"lat": 38.8781, "lon": 114.1943, "alt": 11536.68, "geo": 12092.94, "vel": 215.92, "trk": 189.46, "vrate": 4.23, "sq": null, "cs": "CHH7813", "icao": "780e2e", "og": false, "country": "China"}, {"lat": 40.1281, "lon": 114.521, "alt": 8412.48, "geo": 8801.1, "vel": 217.93, "trk": 273.11, "vrate": 0, "sq": null, "cs": "CHH7133", "icao": "78027d", "og": false, "country": "China"}, {"lat": 39.4938, "lon": 114.7775, "alt": 9265.92, "geo": 9707.88, "vel": 214.9, "trk": 242.64, "vrate": 5.53, "sq": null, "cs": "CCA179", "icao": "780dfe", "og": false, "country": "China"}, {"lat": 39.0957, "lon": 114.4437, "alt": 9784.08, "geo": 10248.9, "vel": 207.72, "trk": 202.88, "vrate": -0.33, "sq": null, "cs": "CCA1953", "icao": "780524", "og": false, "country": "China"}, {"lat": 39.6274, "lon": 115.1103, "alt": 7696.2, "geo": 8054.34, "vel": 216.51, "trk": 242.7, "vrate": 7.8, "sq": null, "cs": "CSZ9118", "icao": "780751", "og": false, "country": "China"}, {"lat": 39.352, "lon": 114.597, "alt": 10462.26, "geo": 10728.96, "vel": 219.75, "trk": 203.74, "vrate": 7.8, "sq": null, "cs": "CCA1305", "icao": "7808cc", "og": false, "country": "China"}];
+
+planes.forEach(function(p){var vr=p.vrate?p.vrate.toFixed(1):"-";var sq=p.sq||"-";var ic=L.divIcon({html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">鉁?/div>',className:"",iconSize:[22,22],iconAnchor:[11,11]});L.marker([p.lat,p.lon],{icon:ic}).addTo(m).bindPopup("<b>"+p.cs+"</b> ("+p.icao+")<br>鏉ユ簮鍥? "+p.country+"<br>姘斿帇楂樺害: "+p.alt.toFixed(0)+"m | 鍑犱綍楂樺害: "+p.geo.toFixed(0)+"m<br>鍦伴€? "+p.vel.toFixed(0)+"m/s | 鑸悜: "+p.trk.toFixed(0)+"掳<br>鍗囬檷鐜? "+vr+"m/s | Squawk: "+sq)})
+
+</script></body></html>
+

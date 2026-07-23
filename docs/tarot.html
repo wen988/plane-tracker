@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>神秘塔罗 | 暗黑占卜</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a0f;
+  min-height: 100vh;
+  font-family: 'Georgia', 'Noto Serif SC', 'STSong', serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+  color: #d4c08c;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 星空粒子背景 */
+#particles {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* 标题区 */
+.title-section {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.title-section .subtitle {
+  font-size: 12px;
+  letter-spacing: 6px;
+  color: #8a7b5c;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.title-section h1 {
+  font-size: 36px;
+  font-weight: normal;
+  background: linear-gradient(180deg, #f0d78c 0%, #a08040 50%, #c8a860 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 4px;
+  text-shadow: none;
+  filter: drop-shadow(0 0 20px rgba(200, 160, 80, 0.4));
+  margin-bottom: 4px;
+}
+
+.title-section .divider {
+  width: 80px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c8a860, transparent);
+  margin: 8px auto;
+}
+
+/* 卡牌容器 */
+.card-stage {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 500px;
+  justify-content: center;
+}
+
+/* 洗牌动画 */
+.shuffle-area {
+  width: 200px;
+  height: 320px;
+  position: relative;
+  perspective: 1000px;
+  margin: 0 auto 20px;
+}
+
+.shuffle-card {
+  width: 200px;
+  height: 320px;
+  position: absolute;
+  top: 0; left: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1a1028, #2a1040, #1a1028);
+  border: 2px solid #6a4c8c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  opacity: 0;
+  transition: opacity 0.08s;
+  box-shadow: 0 0 30px rgba(120, 60, 180, 0.3), inset 0 0 60px rgba(80, 30, 140, 0.2);
+}
+
+.shuffle-card.visible {
+  opacity: 1;
+}
+
+/* 卡牌本体 */
+.card-wrapper {
+  width: 200px;
+  height: 320px;
+  perspective: 800px;
+  cursor: pointer;
+  margin: 0 auto;
+}
+
+.card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.card.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.card-back {
+  background: linear-gradient(145deg, #1a0a2e, #2d1048, #1a0a2e);
+  border: 2px solid #7b4ca0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 40px rgba(120, 60, 200, 0.35), 0 0 80px rgba(120, 40, 180, 0.15), inset 0 0 80px rgba(80, 20, 140, 0.25);
+  cursor: pointer;
+  transition: box-shadow 0.3s;
+}
+
+.card-back:hover {
+  box-shadow: 0 0 60px rgba(160, 80, 220, 0.5), 0 0 100px rgba(140, 60, 200, 0.25), inset 0 0 80px rgba(100, 30, 160, 0.3);
+}
+
+.card-back .back-pattern {
+  width: 160px;
+  height: 280px;
+  border: 1px solid #8a5cb0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.card-back .back-pattern::before {
+  content: '';
+  position: absolute;
+  top: 8px; left: 8px; right: 8px; bottom: 8px;
+  border: 1px solid rgba(160, 120, 200, 0.4);
+  border-radius: 4px;
+}
+
+.card-back .back-star {
+  font-size: 48px;
+  filter: drop-shadow(0 0 15px rgba(200, 160, 80, 0.6));
+  animation: backGlow 2s ease-in-out infinite;
+}
+
+@keyframes backGlow {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(200, 160, 80, 0.4)); }
+  50% { filter: drop-shadow(0 0 25px rgba(240, 200, 100, 0.8)); }
+}
+
+.card-back .back-text {
+  font-size: 11px;
+  color: #8a7bc0;
+  letter-spacing: 3px;
+  margin-top: 12px;
+}
+
+.card-front {
+  background: linear-gradient(160deg, #12051f, #1e0a36, #12051f);
+  border: 3px solid #c8a860;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  box-shadow: 0 0 50px rgba(200, 160, 80, 0.3), 0 0 100px rgba(200, 140, 60, 0.12);
+  justify-content: flex-start;
+}
+
+.card-front .card-symbol {
+  font-size: 48px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 12px rgba(240, 200, 100, 0.6));
+}
+
+.card-front .card-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #f0d080;
+  letter-spacing: 2px;
+  margin-bottom: 2px;
+  text-align: center;
+}
+
+.card-front .card-orientation {
+  font-size: 11px;
+  letter-spacing: 3px;
+  margin-bottom: 10px;
+  padding: 2px 12px;
+  border-radius: 10px;
+}
+
+.card-front .orientation-upright {
+  color: #c8a860;
+  border: 1px solid #c8a860;
+  background: rgba(200, 168, 96, 0.1);
+}
+
+.card-front .orientation-reversed {
+  color: #8a60c0;
+  border: 1px solid #8a60c0;
+  background: rgba(138, 96, 192, 0.1);
+}
+
+/* 解读区 */
+.reading-section {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 0;
+  text-align: center;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reading-section .tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.reading-section .tag {
+  font-size: 12px;
+  padding: 4px 14px;
+  border-radius: 14px;
+  border: 1px solid #6a4c8c;
+  color: #b8a0d0;
+  background: rgba(100, 50, 160, 0.15);
+  letter-spacing: 1px;
+}
+
+.reading-section .interpretation {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #c8c0d8;
+  text-align: justify;
+  padding: 16px 20px;
+  background: rgba(20, 10, 40, 0.6);
+  border: 1px solid rgba(138, 100, 180, 0.3);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  max-width: 380px;
+}
+
+/* 按钮 */
+.btn {
+  display: inline-block;
+  padding: 12px 36px;
+  font-size: 15px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border: none;
+  border-radius: 30px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #2d1040, #4a1a6e);
+  color: #e0c870;
+  border: 1px solid #8a5cb0;
+  box-shadow: 0 0 25px rgba(120, 60, 180, 0.3);
+  font-size: 16px;
+  letter-spacing: 3px;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 40px rgba(160, 80, 220, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 0 15px rgba(120, 50, 180, 0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #b8a0d0;
+  border: 1px solid #6a4c8c;
+  font-size: 13px;
+  letter-spacing: 2px;
+  margin-top: 8px;
+}
+
+.btn-secondary:hover {
+  border-color: #a080d0;
+  color: #d0c0e8;
+  box-shadow: 0 0 15px rgba(120, 60, 180, 0.2);
+}
+
+/* 提示文字 */
+.hint-text {
+  font-size: 13px;
+  color: #8a7bc0;
+  letter-spacing: 2px;
+  margin-top: 16px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* 响应式 */
+@media (max-width: 420px) {
+  .container { padding: 16px; }
+  .title-section h1 { font-size: 30px; }
+  .shuffle-area, .card-wrapper { width: 180px; height: 288px; }
+  .shuffle-card { width: 180px; height: 288px; }
+  .card-front { padding: 20px 12px; }
+  .card-front .card-symbol { font-size: 40px; }
+  .card-front .card-name { font-size: 17px; }
+  .reading-section .interpretation { padding: 14px 16px; font-size: 13px; }
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div class="container">
+  <div class="title-section">
+    <div class="subtitle">✦ Mystic Tarot ✦</div>
+    <h1>神秘塔罗</h1>
+    <div class="divider"></div>
+  </div>
+
+  <div class="card-stage" id="cardStage">
+    <!-- 初始按钮 -->
+    <button class="btn btn-primary" id="btnStart" onclick="startShuffle()">开 始 占 卜</button>
+    
+    <!-- 洗牌区 -->
+    <div class="shuffle-area hidden" id="shuffleArea">
+      <div class="shuffle-card" id="shuffleCard"></div>
+    </div>
+    
+    <!-- 卡牌 -->
+    <div class="card-wrapper hidden" id="cardWrapper">
+      <div class="card" id="card" onclick="flipCard()">
+        <div class="card-face card-back" id="cardBack">
+          <div class="back-pattern">
+            <span class="back-star">🔮</span>
+          </div>
+          <div class="back-text">点 击 翻 牌</div>
+        </div>
+        <div class="card-face card-front" id="cardFront">
+          <div class="card-symbol" id="cardSymbol"></div>
+          <div class="card-name" id="cardName"></div>
+          <div class="card-orientation" id="cardOrient"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 解读区 -->
+  <div class="reading-section hidden" id="readingSection">
+    <div class="tags" id="tags"></div>
+    <div class="interpretation" id="interpretation"></div>
+    <button class="btn btn-secondary" onclick="resetReading()">再 抽 一 张</button>
+  </div>
+</div>
+
+<script>
+// ==================== 塔罗牌数据 ====================
+const TAROT_DECK = [
+  // === 大阿尔卡纳 (0-21) ===
+  {id:0, arcana:"major", name:"愚者", symbol:"🌟", uprightKeywords:"新的开始|冒险|天真|无限可能", upright:"愚者牌象征着一段全新旅程的起点。你正站在悬崖边缘，面前是无尽的未知与可能性。不要害怕不确定性，带着纯净的好奇心迈出第一步。命运正在召唤你，相信宇宙的安排，勇敢前行。此刻的你拥有无限潜力。",
+    reversedKeywords:"鲁莽|犹豫不决|逃避现实|缺乏方向", reversed:"逆位的愚者暗示你或许在逃避某个必须面对的决定。冲动的行为可能带来不必要的风险，而过度谨慎又会让你错失良机。停下来审视内心，找回初心与方向。"},
+  {id:1, arcana:"major", name:"魔术师", symbol:"🪄", uprightKeywords:"创造力|意志力|掌控|潜力变现", upright:"魔术师是行动与创造的化身。此刻你拥有将想法转化为现实所需的一切资源与能力。集中意志，明确目标，宇宙的能量正通过你的双手流入物质世界。你是命运的炼金术士。",
+    reversedKeywords:"欺骗|能力滥用|计划受阻|缺乏动力", reversed:"逆位魔术师警示着能力的误用或计划的延迟。你可能正在浪费天赋，或被表面光鲜的人或事所蒙蔽。暂停行动，重新审视动机与手段是否纯洁。"},
+  {id:2, arcana:"major", name:"女祭司", symbol:"🌙", uprightKeywords:"直觉|神秘|潜意识|内在智慧", upright:"女祭司静坐在神秘帷幕之前，守护着深层的灵性知识。她邀请你沉入内在世界，倾听直觉的低语。答案不在外界，而在你潜意识的幽深水域中。信任那些无法言说的感知。",
+    reversedKeywords:"秘密揭露|忽视直觉|情绪封闭|表里不一", reversed:"逆位女祭司暗示隐藏的秘密即将浮出水面，或被压抑的情绪正在寻求释放。你与内在智慧的连接被切断，导致决策时犹豫不决、信息不足。需要重新建立与自我的对话。"},
+  {id:3, arcana:"major", name:"女皇", symbol:"👑", uprightKeywords:"丰饶|母性|感官之美|创造力", upright:"女皇端坐于丰收的麦田之间，象征物质与精神的丰饶。她召唤你拥抱生活中的感官之美，滋养自己与他人。创造力将如春天般蓬勃发展。这是享受成果、孕育新生的季节。",
+    reversedKeywords:"依赖|空虚|创造力枯竭|忽视自我", reversed:"逆位女皇提示你过度关注外界而忽略了自我滋养。在关系中可能变得依赖他人，或创造力遭遇阻滞。回归内在花园，先灌溉自己的心灵土壤。"},
+  {id:4, arcana:"major", name:"皇帝", symbol:"👑", uprightKeywords:"权威|秩序|领导力|稳定结构", upright:"皇帝端坐于王座之上，象征秩序、权威与稳固的力量。他提醒你用理性与纪律行事，建立清晰的目标与架构。握紧你的权杖，勇敢担当责任，你将赢得尊重并掌控全局。",
+    reversedKeywords:"专制|失控|缺乏自律|权威滥用", reversed:"逆位皇帝暗示权力的滥用或秩序的崩溃。你可能在面对一个专制的权威，或自身陷入混乱无法自控。需要重新审视规则，找到灵活而坚定的领导方式。"},
+  {id:5, arcana:"major", name:"教皇", symbol:"📿", uprightKeywords:"信仰|传统|导师|精神指引", upright:"教皇是智慧与传统价值的守护者。这张牌召唤你寻求导师的指引，或遵循内心深处的信仰体系。通过仪式和学习，你将获得更高层次的精神启蒙。顺应正道而行。",
+    reversedKeywords:"打破传统|教条|盲目追随|精神空虚", reversed:"逆位教皇鼓励你打破陈旧的信仰框架和传统束缚，寻找属于自己的精神道路。你可能正在质疑权威或感到被教条所困。是时候倾听内心真实的声音，而非他人告诉你的'正确'。"},
+  {id:6, arcana:"major", name:"恋人", symbol:"💕", uprightKeywords:"爱情|和谐|选择|灵魂契约", upright:"恋人之牌不仅关于爱情，更象征生命中重大的抉择。你正面临一个需要心灵与理性合一的选择。听从你内心的真实渴望，做出与灵魂契合的决定。真挚的关系将带来深刻成长。",
+    reversedKeywords:"分离|失衡|错误选择|价值观冲突", reversed:"逆位恋人暗示着关系中的不和谐或价值观的冲突。你正回避一个艰难的抉择，或陷入诱惑与背叛的困境。停下脚步，仔细审视你真正珍视的是什么。"},
+  {id:7, arcana:"major", name:"战车", symbol:"🛡️", uprightKeywords:"胜利|意志力|征服|决心", upright:"战车轰鸣前行，代表着不可阻挡的意志与行动力。你已驾驭内心对立的二元力量，朝着目标坚定推进。凭借勇气和专注，任何障碍都无法阻挡你前进的步伐。胜利在望。",
+    reversedKeywords:"失控|冲突|挫折|方向迷失", reversed:"逆位战车意味着前进的道路上出现了阻力，你可能感到方向迷失或内心被冲突撕扯。控制欲过强反而导致失控。需要暂停进攻，重整旗鼓再出发。"},
+  {id:8, arcana:"major", name:"力量", symbol:"🦁", uprightKeywords:"勇气|内在力量|耐心|以柔克刚", upright:"力量牌描绘的不是外部的蛮力，而是内在的坚韧与温柔驯服。你拥有以柔克刚的智慧，用耐心和慈悲驯服内心的野兽。真正的力量来源于对自己全然的接纳与信任。",
+    reversedKeywords:"软弱|恐惧|自我怀疑|失控", reversed:"逆位力量暗示你正经历自信的低谷，被恐惧与不安全感支配。你可能感到无力掌控局面，或过度压抑本能导致爆发。重新连结你内在的力量源泉。"},
+  {id:9, arcana:"major", name:"隐者", symbol:"🏮", uprightKeywords:"内省|孤独|智慧|寻求真理", upright:"隐者持灯独行于黑暗之中，照亮内心最深处的真实。此刻你需要暂时退隐，在孤独中寻找内在的智慧和答案。沉默与沉思将带给你远超喧嚣世界的启迪。",
+    reversedKeywords:"孤立|恐惧独处|逃避现实|过度内省", reversed:"逆位隐者警示过度孤立可能演变为逃避。你或许因为恐惧社交而封闭自己，或沉溺于过度内省中丧失了行动力。是时候让内心的智慧之光重新照入现实世界。"},
+  {id:10, arcana:"major", name:"命运之轮", symbol:"☸️", uprightKeywords:"命运|转折点|机遇|因果", upright:"命运之轮永不停歇地旋转，带来无法抗拒的改变与转机。此刻重大的命运转折正在发生。顺应宇宙的流动，幸运女神正向你微笑。一切际遇都有其因果与时机。",
+    reversedKeywords:"厄运|抗拒改变|恶性循环|时机未到", reversed:"逆位的命运之轮暗示你正遭遇一段低谷周期，事情的发展似乎总在与你作对。你可能正抗拒不可阻挡的变化，导致更多的痛苦。接受这是命运循环的一部分，黎明终将到来。"},
+  {id:11, arcana:"major", name:"正义", symbol:"⚖️", uprightKeywords:"公正|真相|因果|责任", upright:"正义之剑悬于天平之上，此刻宇宙将依据因果法则做出裁决。事情的真相即将大白，诚实和公平将得到回报。承担你的责任，做出合乎良知的选择，结果将不偏不倚。",
+    reversedKeywords:"不公|逃避责任|偏见|失衡", reversed:"逆位正义警示偏袒、不公或逃避责任正在发生。你或许在回避自己行为带来的后果，或被外界的不公正对待。真相可能被掩盖，需要你主动捍卫公平。"},
+  {id:12, arcana:"major", name:"倒吊人", symbol:"🪢", uprightKeywords:"牺牲|换个视角|放手|觉醒", upright:"倒吊人以全然颠倒的视角看待世界，这是灵性觉醒的前奏。此刻的停滞与牺牲并非惩罚，而是让你以全新的角度理解生命。放下掌控欲，臣服于当下，你将获得超越的智慧。",
+    reversedKeywords:"停滞|无谓牺牲|固执|错失领悟", reversed:"逆位倒吊人暗示你陷入了无法挣脱的停滞状态，或正在进行毫无意义的自我牺牲。你可能拒绝从困境中汲取教训，顽固地坚持旧有视角。是时候打破循环了。"},
+  {id:13, arcana:"major", name:"死神", symbol:"💀", uprightKeywords:"结束|蜕变|新生|净化", upright:"死神之牌并非肉体的消亡，而是象征旧我的彻底终结与重生。一段关系、一种生活方式、一个旧有的身份即将谢幕。勇敢接受这场必要的告别，帷幕落下之后，新的太阳必将升起。",
+    reversedKeywords:"抗拒改变|停滞|恐惧死亡|腐朽", reversed:"逆位死神意味着你正拼命抗拒生命中必然的结束与蜕变。对失去的恐惧让你紧抓早已腐朽的事物不放。这种停滞只会延长痛苦。放下才能获得真正的自由。"},
+  {id:14, arcana:"major", name:"节制", symbol:"🌊", uprightKeywords:"平衡|调和|耐心|中庸之道", upright:"节制天使将圣杯中的水在两极之间调和，象征平衡与融合的艺术。你需要保持耐心，找到事物之间的中和点。避免极端，以温柔而持续的方式达成目标。内心的平静是最强大的力量。",
+    reversedKeywords:"失衡|过度|缺乏节制|冲突", reversed:"逆位节制暗示生活的天平正在倾斜。过度放纵、情绪失控或目标偏离正轨正在发生。你需要重新寻回内在的中心点，否则失衡将带来更严重的后果。"},
+  {id:15, arcana:"major", name:"恶魔", symbol:"👹", uprightKeywords:"束缚|欲望|物质主义|阴影", upright:"恶魔之牌揭示了物质世界和欲望带来的束缚。你可能正被金钱、权力或一段不健康的关系所困，但锁链的钥匙就在自己手中。直面内心的阴影，承认束缚的存在，就能挣脱它。",
+    reversedKeywords:"解脱|觉醒|摆脱束缚|重新掌控", reversed:"逆位恶魔是极具力量的突破之兆。你终于看清了困住自己的枷锁，并下定决心挣脱。这是脱离负面执念、重获自由的时刻。光明正穿透最深的阴影。"},
+  {id:16, arcana:"major", name:"高塔", symbol:"🏰", uprightKeywords:"剧变|崩溃|觉醒|真相冲击", upright:"高塔被雷电击碎，象征突如其来的崩溃与颠覆。旧有的虚假结构在真相的冲击下灰飞烟灭。虽然过程痛苦，但这是必要的清除。唯有炸毁虚伪的城堡，才能在废墟上建立真正坚实的地基。",
+    reversedKeywords:"避免灾难|拖延|压抑觉醒|困境延续", reversed:"逆位高塔暗示你正试图阻止一场不可避免的崩溃。虽然暂时延缓了危机，但根本问题并未解决。拖延只会让最终的爆发更具破坏性。不如主动拆除隐患。"},
+  {id:17, arcana:"major", name:"星星", symbol:"⭐", uprightKeywords:"希望|疗愈|灵感|宁静", upright:"星星是暴风雨后天空出现的第一道光。高塔的废墟之上，星星带来了治愈与希望。你的心灵正在恢复平静，灵感如泉涌。对宇宙保持信心，许下心愿，光明的未来正在铺展。",
+    reversedKeywords:"绝望|信念动摇|自我怀疑|灵感枯竭", reversed:"逆位星星暗示短暂的黑暗遮蔽了希望的光芒。你可能感到信念动摇、灵感枯竭，甚至对宇宙的安排产生怀疑。但这只是暂时的阴云，星星的光从未真正熄灭。"},
+  {id:18, arcana:"major", name:"月亮", symbol:"🌑", uprightKeywords:"幻觉|恐惧|潜意识|迷雾", upright:"月亮照亮夜间幽暗的道路，这里充满了幻象、梦境与潜意识的暗流。你正行走于不确定的迷雾中，所见未必真实。相信直觉而非表象，深入探寻潜意识的讯息，穿过迷雾即是黎明。",
+    reversedKeywords:"恐惧消散|真相浮现|解脱|混乱平息", reversed:"逆位月亮暗示迷雾正在散去，隐藏的恐惧和幻象逐渐消散。真相开始浮现水面，你将从长久的精神混乱中解脱出来。虽然不安仍在，但光明已在路的尽头。"},
+  {id:19, arcana:"major", name:"太阳", symbol:"☀️", uprightKeywords:"喜悦|成功|活力|光明", upright:"太阳是塔罗中最吉祥的牌之一，象征纯粹的喜悦、成功与生命力。乌云已然散尽，温暖的阳光照亮你的一切。享受这灿烂的时刻，你的自信与热情将感染周围所有人。生命真美好。",
+    reversedKeywords:"阴霾|短暂挫折|缺乏热情|快乐受阻", reversed:"逆位太阳并不全然是坏消息，它只是提示快乐暂时被云层遮蔽。你可能感到热情消退或遭遇小小挫折，但太阳永远在那里。保持乐观，阴霾很快会过去。"},
+  {id:20, arcana:"major", name:"审判", symbol:"📯", uprightKeywords:"觉醒|重生|召唤|清算", upright:"审判天使吹响号角，召唤你从沉睡中醒来。过去的因果正在清算，此刻是灵魂层面的彻底重生。回应内在的召唤，拥抱你真正的使命。不再犹豫，觉醒的时刻已经到了。",
+    reversedKeywords:"逃避召唤|自我怀疑|清算延迟|抗拒重生", reversed:"逆位审判暗示你正在逃避灵魂深处的召唤。对改变的恐惧让你拒绝面对真实的自己。清算被推迟，但不会消失。勇敢面对过去的因果，才能迎来真正的释放。"},
+  {id:21, arcana:"major", name:"世界", symbol:"🌍", uprightKeywords:"完成|圆满|成功|整体", upright:"世界是塔罗之旅的终点与新的起点，象征一个完整周期的圆满结束。你已达成了重要的里程碑，收获了智慧与满足。宇宙为你加冕，庆祝这来之不易的完成。你与万物合一。",
+    reversedKeywords:"未完成|停滞|不圆满|延迟", reversed:"逆位世界意味着接近终点却差最后一步。一个关键的项目、关系或人生阶段尚未圆满收尾。不要气馁，审视还有哪些未解决的问题，小小的补充就能成就完整的圆。"},
+
+  // === 小阿尔卡纳：权杖 (22-35) ===
+  {id:22, arcana:"minor", name:"权杖王牌", symbol:"🪵", uprightKeywords:"创意|灵感|新行动|热情", upright:"权杖王牌是一团炽热的创造力之火，点燃全新的冒险和项目。无穷的灵感和行动力正注入你的生命。不要再犹豫，抓住这个势头，大胆开始你一直渴望的事。宇宙正在给你开绿灯。",
+    reversedKeywords:"拖延|创意枯竭|计划推迟|动力不足", reversed:"逆位权杖王牌提示你行动的火花暂时微弱。一个新的计划可能遭遇延迟，或你正感到创意枯竭、热情不再。这只是一段短暂的沉寂，重新找回你的初心和动力。"},
+  {id:23, arcana:"minor", name:"权杖二", symbol:"🗺️", uprightKeywords:"规划|远见|决策|扩张", upright:"权杖二者手握地球仪，眺望远方，正在规划未来宏图。你已拥有了前进的资源，现在需要做出关于方向的决策。大胆展望，不要局限在当前的舒适圈。世界很大，值得你走出去。",
+    reversedKeywords:"缺乏远见|犹豫|受限|规划失误", reversed:"逆位权杖二暗示你对未来感到迷茫，无法做出清晰规划。可能因为害怕未知而裹足不前，或低估了自身的能力。跳出眼前的小格局，重新审视你的选项。"},
+  {id:24, arcana:"minor", name:"权杖三", symbol:"⛵", uprightKeywords:"扩展|远航|合作|远见实现", upright:"权杖三者站在码头眺望船只远航，象征计划进入执行阶段。你的前期筹备正在转化为实质性的行动。合作与贸易之门敞开，远方将带来好消息。坚定地迈出这一步。",
+    reversedKeywords:"受阻|回程|失望|未达预期", reversed:"逆位权杖三提示远方的计划可能遭遇挫折或延迟。一次预期的合作、旅行或业务扩张未达预期。这不是终点，调整航向，从经验中汲取教训再出发。"},
+  {id:25, arcana:"minor", name:"权杖四", symbol:"🏕️", uprightKeywords:"庆典|和谐|家园|稳定", upright:"权杖四描绘了欢庆与安居的场景。一个项目顺利完成，或一段关系、家庭生活进入了稳定和谐的阶段。停下来享受这来之不易的成果，与重要的人一起庆祝。",
+    reversedKeywords:"不稳定|家庭冲突|庆典取消|安全缺失", reversed:"逆位权杖四暗示家庭或团队中的不稳定因素正在浮现。原本计划中的庆祝可能落空，或你感到归属感与安全感的缺失。关注并修复关系的裂痕。"},
+  {id:26, arcana:"minor", name:"权杖五", symbol:"⚔️", uprightKeywords:"竞争|冲突|挑战|激辩", upright:"权杖五描绘激荡的竞争与冲突场景。你正处于一个充满挑战的环境，各方意见激荡碰撞。这不一定是坏事，健康的竞争会激发最好的你。在混乱中找到自己的节奏与立场。",
+    reversedKeywords:"避免冲突|达成共识|平息争论|内在矛盾", reversed:"逆位权杖五暗示你正在回避必要的冲突，或在内心与自我交战。表面的和平掩盖了深层的分歧。勇敢面对矛盾，坦诚沟通才能达成真正的共识。"},
+  {id:27, arcana:"minor", name:"权杖六", symbol:"🏆", uprightKeywords:"胜利|认可|凯旋|自信", upright:"权杖六是凯旋而归的胜利之兆。你的努力获得了公众的认可与赞誉。自信地接受掌声与奖励，这是你应得的荣耀时刻。继续乘胜追击，你的光芒正在被看见。",
+    reversedKeywords:"失败|骄傲自满|不认可|妒忌", reversed:"逆位权杖六警示骄傲自满可能带来跌倒。你可能过于在意他人的认可，或遭遇了意外的失利。不要让短暂的挫折定义你的价值，重新聚焦在自己的目标上。"},
+  {id:28, arcana:"minor", name:"权杖七", symbol:"🛡️", uprightKeywords:"坚持|防御|勇气|不屈", upright:"权杖七描绘一人独自对抗六个权杖的进攻。你正处在需要坚守阵地的时刻。虽然压力巨大且孤立无援，但你有足够的勇气和韧性守住自己的领土。不要放弃，胜利属于坚持到底的人。",
+    reversedKeywords:"放弃|被淹没|认输|信心崩溃", reversed:"逆位权杖七暗示你感到难以招架外界的压力，正濒临放弃的边缘。过多的负担压得你喘不过气。这或许是重新审视哪些战斗值得打的时刻，战略性撤退不是失败。"},
+  {id:29, arcana:"minor", name:"权杖八", symbol:"🏹", uprightKeywords:"迅速|行动|进展|信息传达", upright:"权杖八展现八根权杖飞速划过天空，象征事务的迅猛推进。停滞期已过，一切开始加速运转。信息、消息、旅程都将高速抵达。拥抱这股强劲的动能，顺势而为。",
+    reversedKeywords:"延迟|混乱|方向错误|冲动", reversed:"逆位权杖八意味着骤然的减速或方向偏离。原本飞速推进的事务遭遇意外障碍，混乱的信息可能导致错误决策。此时需要控制节奏，理清头绪再重新加速。"},
+  {id:30, arcana:"minor", name:"权杖九", symbol:"💂", uprightKeywords:"警惕|坚持|最后的考验|韧性", upright:"权杖九描绘了一个负伤但仍坚定站立防守的战士。你已经历了漫长的战斗，虽然疲惫但仍需保持警惕。这是黎明前最后的考验，你比自己想象中更坚韧。再坚持一下，终点就在前方。",
+    reversedKeywords:"偏执|崩溃|放手|过度防御", reversed:"逆位权杖九暗示你的防御机制已经过度运转。长期的警惕演变为偏执，让你难以信任任何人。或者你终于不堪重负，选择放弃一场不再值得继续的战斗。"},
+  {id:31, arcana:"minor", name:"权杖十", symbol:"🏋️", uprightKeywords:"负担|责任|努力|完成在即", upright:"权杖十描绘一个努力扛起十根权杖前行的人。你正肩负着沉重的责任与压力，虽然辛苦但完成任务近在眼前。学会委派与分担，你不必独自承担一切。目标即将实现。",
+    reversedKeywords:"重担压垮|不负责任|逃避|过度透支", reversed:"逆位权杖十提醒你已不堪重负。过度的责任正在压垮你的身心。你需要立即学会说"不"，放下不属于自己的包袱。逃避虽然可耻但有用，先让自己喘口气再重新出发。"},
+  {id:32, arcana:"minor", name:"权杖侍从", symbol:"🧒", uprightKeywords:"热情|探索|新灵感|好消息", upright:"权杖侍从带着纯真的热情前来报信。一个新灵感、新消息或学习机会即将到来。保持孩童般的好奇心与冒险精神去迎接它。这个开始虽然稚嫩却充满了无限可能。",
+    reversedKeywords:"坏消息|缺乏创意|幼稚|半途而废", reversed:"逆位权杖侍从暗示热情来得快去得也快，一个新想法可能无疾而终。你或许收到不利的消息，或因为过于幼稚的方式把事情搞砸。成熟一点，将热情转化为持续的行动。"},
+  {id:33, arcana:"minor", name:"权杖骑士", symbol:"🏇", uprightKeywords:"行动|冒险|激情|冲动", upright:"权杖骑士策马冲锋，是纯粹的行动与激情化身。他带着燃烧的斗志闯入你的生活中。大胆追寻你想要的，不要犹豫。这是快速行动的时刻，热血与勇气将带你突破一切阻力。",
+    reversedKeywords:"鲁莽|延迟|失控|热情错放", reversed:"逆位权杖骑士警示冲动的行为可能带来麻烦。你的热情可能错放了对象，或者行动因外部因素被迫中断。放慢速度，别让急躁毁了原本好的开局。"},
+  {id:34, arcana:"minor", name:"权杖王后", symbol:"👸", uprightKeywords:"自信|领袖魅力|独立|温暖", upright:"权杖王后是自信而充满魅力的女性形象。她热爱生活，独立自主且感染力十足。你正在散发这样的能量——用你的热情点燃他人。掌管你的王国，做自己命运的女王。",
+    reversedKeywords:"嫉妒|缺乏自信|脾气暴躁|控制欲", reversed:"逆位权杖王后暗示自信的缺失与情绪失控。你可能变得善妒、暴躁或过度控制。不要让不安全感侵蚀你的光芒。回归内在，找回那个自信从容的自己。"},
+  {id:35, arcana:"minor", name:"权杖国王", symbol:"🤴", uprightKeywords:"领导力|远见|企业家精神|成就", upright:"权杖国王是成熟而富有远见的领袖。你已具备了创造伟大事业的眼光与魄力。勇敢承担领导角色，用正直与热忱激励团队。这是开创属于你的王国的最佳时刻。",
+    reversedKeywords:"暴政|缺乏远见|独裁|事业受挫", reversed:"逆位权杖国王暗示领导力的滥用或事业上的挫折。你可能变得独断专行，或因短视导致了失败。重新审视你的领导风格，真正的王者以德服人，而非以力压人。"},
+
+  // === 小阿尔卡纳：圣杯 (36-49) ===
+  {id:36, arcana:"minor", name:"圣杯王牌", symbol:"🏆", uprightKeywords:"爱|直觉|情感开端|丰饶", upright:"圣杯王牌是爱之源泉，象征一段情感、直觉或精神层面的全新开始。心中满溢的情感正在寻求表达与连接。敞开心扉去爱与被爱，这股纯净的能量将带来巨大的满足与喜悦。",
+    reversedKeywords:"情感封闭|空虚|错失爱|压抑", reversed:"逆位圣杯王牌暗示情感的干涸与封闭。你可能压抑了内心的真实感受，或错失了一段值得珍惜的情感连接。让堵塞的情感重新流动起来，允许自己去感受。"},
+  {id:37, arcana:"minor", name:"圣杯二", symbol:"💞", uprightKeywords:"恋爱|合作伙伴|和谐|连接", upright:"圣杯二描绘平等而深情的连接。无论是浪漫关系还是商务合作，双方在平等与尊重中和谐共处。这是确认关系、建立深度纽带的美好时刻。用心去经营这份珍贵的关系。",
+    reversedKeywords:"分手|不平等|关系紧张|背叛", reversed:"逆位圣杯二暗示关系中的失衡与裂痕。恋人之间可能出现误解或分手危机，合作伙伴之间的信任正在瓦解。诚实地面对问题，和平地调整或结束这段关系。"},
+  {id:38, arcana:"minor", name:"圣杯三", symbol:"🥂", uprightKeywords:"庆祝|友谊|社交|快乐", upright:"圣杯三展现三位女子举杯欢庆的场景。一段轻松快乐的社交时光正在到来。与朋友们欢聚，分享生活中的小确幸。这是享受人际温暖、庆祝小小胜利的时刻。",
+    reversedKeywords:"过度放纵|八卦|社交疲惫|孤立", reversed:"逆位圣杯三提醒你享受不要过度。沉溺于派对与享乐可能掩盖了内心的空虚，或社交圈子中出现了闲言碎语。适当抽离，给自己安静的恢复时间。"},
+  {id:39, arcana:"minor", name:"圣杯四", symbol:"😴", uprightKeywords:"沉思|冷漠|新机会被忽视|内省", upright:"圣杯四描绘一个对面前三只圣杯无动于衷、沉浸在自己世界中的人。你正处于一种倦怠与沉思的状态，可能忽略了身边的好机会。抬头看看，命运正在递给你新的礼物。",
+    reversedKeywords:"重新振作|抓住机会|打破倦怠|新动力", reversed:"逆位圣杯四是从倦怠中苏醒的积极信号。你终于注意到那个被忽视的机会，并准备主动抓住它。低迷期正在结束，行动力和新鲜感重新回到你的生命中。"},
+  {id:40, arcana:"minor", name:"圣杯五", symbol:"😢", uprightKeywords:"悲伤|失去|遗憾|聚焦缺憾", upright:"圣杯五描绘因三个翻倒的圣杯而悲伤的人，忽略了身后仍完好站立的两只。你在经历失去与遗憾的痛苦。但请记得回头看看，生命中仍然存在值得珍视的事物。悲伤会过去。",
+    reversedKeywords:"重建|希望|宽恕|走出悲伤", reversed:"逆位圣杯五是治愈和重建的曙光。你开始从悲伤中走出来，把注意力转向那些依然存在的美好。接受已经无法改变的，勇敢地收拾心情重新上路。"},
+  {id:41, arcana:"minor", name:"圣杯六", symbol:"🌼", uprightKeywords:"回忆|纯真|赠予|乡愁", upright:"圣杯六将你带回纯真美好的往昔时光。童年回忆、旧友重逢，或收到一份不求回报的善意馈赠。在怀旧的温暖中汲取力量，但不要沉溺过去。怀揣这份纯真，继续前行。",
+    reversedKeywords:"活在过去|停滞|遗忘恩情|无法前进", reversed:"逆位圣杯六警示过度沉湎于过去可能阻碍你迈向未来。你可能被童年创伤或旧日辉煌困住，无法活在当下。是时候将这些回忆放入心中的博物馆，轻装上阵。"},
+  {id:42, arcana:"minor", name:"圣杯七", symbol:"🌈", uprightKeywords:"幻想|选择|白日梦|诱惑", upright:"圣杯七展现了七个悬浮于云端的幻象圣杯，象征丰富的选择与飘渺的幻想。你被众多诱人的可能性包围，但并非全部真实。花些时间分辨哪些是切实可行的目标，哪些只是幻影。",
+    reversedKeywords:"清醒|脚踏实地|聚焦|选择明确", reversed:"逆位圣杯七是将梦想照进现实的时刻。迷雾散去，你终于看清了哪个选项值得追求。不再被虚幻的诱惑分散精力，坚定地锁定目标并脚踏实地去实现。"},
+  {id:43, arcana:"minor", name:"圣杯八", symbol:"🚶", uprightKeywords:"离开|追寻|更深意义|告别", upright:"圣杯八描绘一个人转身离开堆积的圣杯，踏上未知旅程。即便物质或情感已然富足，你仍感到更深层的空虚。勇敢地告别舒适区，去追寻灵魂真正渴望的意义。",
+    reversedKeywords:"困住|徘徊|无法放手|逃避出走", reversed:"逆位圣杯八暗示你内心渴望离开，却因恐惧或不舍而无法行动。你在原地徘徊，活得越来越痛苦。或者你以一种逃避而非追寻的心态出走，这样只会把问题打包带走。"},
+  {id:44, arcana:"minor", name:"圣杯九", symbol:"😊", uprightKeywords:"愿望成真|满足|自在|成功", upright:"圣杯九被人称为"愿望牌"。你舒适地坐拥九只圣杯，脸上洋溢着满足的微笑。一个期盼已久的愿望正在实现。享受这份成就感和物质的舒适，这是你努力应得的奖赏。",
+    reversedKeywords:"不满足|愿望落空|炫耀|内在空虚", reversed:"逆位圣杯九暗示表面的光鲜难以掩盖内在的空虚。你可能过度追求外在认可而忽视了真正的快乐，或某个愿望终究落空。审视你真正追求的是虚荣还是真实的幸福。"},
+  {id:45, arcana:"minor", name:"圣杯十", symbol:"🌈", uprightKeywords:"幸福家庭|圆满|归属|爱之巅峰", upright:"圣杯十是情感世界最美好的愿景——幸福圆满的家庭与灵魂深处的归属感。你进入了一段情感高度满足的时期。拥抱这份爱的丰盛，你与所爱之人共享这宁静而深邃的喜悦。",
+    reversedKeywords:"家庭不和|破碎|幸福幻灭|疏离", reversed:"逆位圣杯十暗示家庭或亲密团体中的裂痕。完美的幻象破碎，露出了现实的矛盾与疏离。接受不完美是关系的一部分，真诚沟通才能修复伤痕。"},
+  {id:46, arcana:"minor", name:"圣杯侍从", symbol:"👦", uprightKeywords:"创意|直觉|情感信息|浪漫", upright:"圣杯侍从带来充满直觉与创意的消息。一个温和而浪漫的邀请、一次情感的表达或灵感的乍现正悄然靠近。保持开放与好奇，这柔软的能量将滋养你的心灵。",
+    reversedKeywords:"情感不成熟|幻想破灭|暗恋|坏消息", reversed:"逆位圣杯侍从暗示情感上的不成熟与幻想的破灭。暗恋可能只是单相思，或一个创意的提案被拒绝。不要因一次碰壁而封闭自己，成长需要时间。"},
+  {id:47, arcana:"minor", name:"圣杯骑士", symbol:"🏇", uprightKeywords:"浪漫|求婚|理想主义|邀请", upright:"圣杯骑士是浪漫与理想主义的化身。一位温柔而富有艺术气质的人正带着邀约向你走来。这可能是一次表白、合作邀请或创意项目的机会。跟随你的心，拥抱美好的事物。",
+    reversedKeywords:"欺骗|虚假承诺|情绪化|逃避", reversed:"逆位圣杯骑士警示表面美好的承诺可能暗藏欺骗。某个人或你自身正在用不切实际的幻想逃避现实。辨别真伪，不要被华丽的表象迷惑双眼。"},
+  {id:48, arcana:"minor", name:"圣杯王后", symbol:"👸", uprightKeywords:"同理心|直觉|疗愈|艺术家", upright:"圣杯王后是情感智慧与同理心的极致象征。她深刻理解他人感受，拥有强大的疗愈能力。你正在展现高度敏感的直觉和艺术天赋。用你的温柔与洞察去疗愈和创造。",
+    reversedKeywords:"情绪失控|过度敏感|抑郁|依赖", reversed:"逆位圣杯王后警示情绪上的失衡。过度的敏感让你陷入抑郁或依赖他人的困境。你可能正在为了照顾他人而耗竭自己。设立情感边界，先疗愈自己才能疗愈他人。"},
+  {id:49, arcana:"minor", name:"圣杯国王", symbol:"🤴", uprightKeywords:"情感成熟|宽容|创造力|艺术", upright:"圣杯国王是情感世界成熟的掌控者。他深沉而不压抑，富有创造力且宽容大度。你已学会驾驭情感的波浪，将其转化为艺术与智慧的力量。以成熟的爱与世界互动。",
+    reversedKeywords:"情感勒索|控制|情绪化|创作瓶颈", reversed:"逆位圣杯国王暗示情感上的操纵与失控。一个外表成熟但内心阴暗的人正在用情绪勒索控制他人，或你自己陷入了创作与情绪的泥沼。保持清醒，提防情感操控。"},
+
+  // === 小阿尔卡纳：宝剑 (50-63) ===
+  {id:50, arcana:"minor", name:"宝剑王牌", symbol:"⚔️", uprightKeywords:"真理|清晰|突破|智识", upright:"宝剑王牌是思维之剑，斩断一切迷雾与困惑。一个清晰的洞见、一段真相或一次理智的决断即将到来。头脑终于澄明，你看到了问题的核心。以这份锐利的智慧开辟新的道路。",
+    reversedKeywords:"混乱|误判|攻击性|真相扭曲", reversed:"逆位宝剑王牌警示你正被偏见或错误信息所误导。思维变得混乱而有攻击性，做出的判断可能失之偏颇。放下急于下结论的冲动，先冷静下来看清事实。"},
+  {id:51, arcana:"minor", name:"宝剑二", symbol:"⚖️", uprightKeywords:"抉择|僵局|平衡之思|逃避", upright:"宝剑二描绘蒙眼双手持剑交叉于胸前的人，象征内心的僵持与艰难的抉择。你正在刻意回避一个困难的决定，以此维持表面的平静。但逃避不能解决问题，早晚要取下眼罩。",
+    reversedKeywords:"打破僵局|做出决定|真相暴露|痛苦抉择", reversed:"逆位宝剑二迫使你直面一直回避的抉择。眼罩被取下，真相的锐利让你无处可逃。虽然痛苦，但做出决定后你将感受到久违的轻松。"},
+  {id:52, arcana:"minor", name:"宝剑三", symbol:"💔", uprightKeywords:"心碎|悲伤|背叛|三角关系", upright:"宝剑三三剑穿心，是痛苦与心碎最直白的表达。你正在经历被背叛、分离或深深的悲伤。请允许自己哭泣，这份痛苦需要被正视而非压抑。心碎是愈合的第一步。",
+    reversedKeywords:"愈合|释放|宽恕|走出阴霾", reversed:"逆位宝剑三是痛苦正在消退的信号。虽然伤痕仍在，但你已开始释放悲伤，走向愈合。宽恕他人或自己，将这段经历转化为成长的养分。心会重新完整。"},
+  {id:53, arcana:"minor", name:"宝剑四", symbol:"🛌", uprightKeywords:"休息|沉思|恢复|静养", upright:"宝剑四描绘一个人在教堂中静静休息。你经历了一场精神上的激战后急需休整。这不是逃避，而是为了更远的征途而积蓄力量。给自己一段独处和睡眠的时间来恢复。",
+    reversedKeywords:"失眠|躁动|重新出发|强制休息", reversed:"逆位宝剑四暗示你无法得到真正的休息。失眠、焦虑或不甘让你难以平静。身体已在发出警报，强制自己停下来。继续前行之前，必须充电。"},
+  {id:54, arcana:"minor", name:"宝剑五", symbol:"🏴", uprightKeywords:"赢而不得|空洞胜利|冲突|傲慢", upright:"宝剑五的胜利以他人的损失为代价，是一种空虚的获胜。你可能在职场或人际中赢得了争吵，却输了关系。审视你争斗的动机——真正的赢家不应洋洋得意于他人的失败。",
+    reversedKeywords:"和解|放下争执|避免冲突升级|悔意", reversed:"逆位宝剑五暗示冲突后渴望和解的意愿。你开始意识到这场争斗得不偿失，并愿意主动伸出橄榄枝。让一步不是懦弱，而是格局。"},
+  {id:55, arcana:"minor", name:"宝剑六", symbol:"🛶", uprightKeywords:"过渡|离开|疗伤之旅|缓慢前进", upright:"宝剑六描绘乘船渡过暗河的旅程，象征着从困难向平静的过渡。虽然船身插着代表过往伤痛的宝剑，但方向是朝向宁静的彼岸。接受这个过程，你正在离开风暴中心。",
+    reversedKeywords:"无法离开|回到风暴|停滞|情绪洪水", reversed:"逆位宝剑六意味着你试图逃离困境却受困于原地。旧的问题如潮水般涌回，让你难以脱身。你可能还未真正准备好告别，需要先处理根源问题再启程。"},
+  {id:56, arcana:"minor", name:"宝剑七", symbol:"🦊", uprightKeywords:"策略|狡猾|孤身犯险|权宜之计", upright:"宝剑七描绘踮脚偷取五把剑、留下两把的人。你需要采取非常规手段或灵活的策略来应对当前局面。这需要机智与勇气，但请确保你的行为出于善意而非欺骗。",
+    reversedKeywords:"被发现|策略失败|悔改|放弃计谋", reversed:"逆位宝剑七暗示你的小心思或策略已被识破。一个不够光彩的计划可能曝光并面临后果。与其继续掩饰，不如坦诚相告。重新选择正直的道路。"},
+  {id:57, arcana:"minor", name:"宝剑八", symbol:"🔗", uprightKeywords:"束缚|困境|自我设限|无力感", upright:"宝剑八描绘被绑缚并围困于剑阵中的女子，象征看似无法逃脱的绝境。但她的眼被蒙住，双脚并未绑死——困境大多是自我限制造成的。摘下眼罩，你会发现出路就在脚下。",
+    reversedKeywords:"解脱|突破|清除限制|醒悟", reversed:"逆位宝剑八是脱困的强力信号。束缚的绳索终于松开，你看到了那个一直在那里的出口。自我怀疑的迷雾消散，你从心理监狱中大步走出。"},
+  {id:58, arcana:"minor", name:"宝剑九", symbol:"😰", uprightKeywords:"噩梦|焦虑|内疚|失眠", upright:"宝剑九描绘深夜惊醒深陷恐惧的人，墙上悬着九把剑。你正被焦虑、内疚与噩梦缠绕，这些恐惧更多来自内心而非外部现实。面对这些暗夜中的心魔，它们远没有你想象中那么强大。",
+    reversedKeywords:"释然|曙光|希望|焦虑缓解", reversed:"逆位宝剑九是长夜将尽的希望。那些彻夜折磨你的焦虑和内疚开始松动，一缕曙光照进了黑暗。你终于看到了事情的另一面，重获内心的平静。"},
+  {id:59, arcana:"minor", name:"宝剑十", symbol:"⚰️", uprightKeywords:"终结|谷底|崩溃|无可再失", upright:"宝剑十是塔罗中最骇人的画面之一——十剑穿透倒下的身躯。但请记住，这象征着一个彻底终结的时刻。你已身处谷底，不会再更糟了。黑暗的极致即是黎明，只有往上走的份。",
+    reversedKeywords:"复苏|起死回生|吸取教训|触底反弹", reversed:"逆位宝剑十是触底反弹的强力信号。最糟糕的已经过去，你正在从废墟中挣扎起身。这段痛苦的经历留下了印记，但也赋予了你无人可夺的韧性和智慧。"},
+  {id:60, arcana:"minor", name:"宝剑侍从", symbol:"🧒", uprightKeywords:"好奇心|探索|新想法|警觉", upright:"宝剑侍从手持利刃，锐利地观察着世界。一个新想法、学习机会或需要警惕的动态正在靠近。保持敏锐的头脑和旺盛的求知欲，准备迎接智识上的挑战与成长。",
+    reversedKeywords:"八卦|谣言|思维混乱|冷嘲热讽", reversed:"逆位宝剑侍从暗示言语上的伤害与思维混乱。你可能在散播或接收不实的谣言，或陷入无意义的争论。注意言辞，慎思明辨。"},
+  {id:61, arcana:"minor", name:"宝剑骑士", symbol:"🏇", uprightKeywords:"决断|行动|智识冲锋|果敢", upright:"宝剑骑士是思维与行动的结合，如狂风般冲入战场的战士。你已做出清晰的判断，此刻需要快刀斩乱麻。不要优柔寡断，用精准的逻辑和果断的行动推倒一切障碍。",
+    reversedKeywords:"鲁莽|不计后果|不可控|言语暴力", reversed:"逆位宝剑骑士警示急切的行动可能带来破坏。你的意见表达变得过于尖锐和咄咄逼人，或在没有充分准备下贸然冲锋。先让暴风稍歇，用理智驾驭你的马力。"},
+  {id:62, arcana:"minor", name:"宝剑王后", symbol:"👸", uprightKeywords:"智慧|洞察|独立|公正", upright:"宝剑王后端坐于云端，是经历风雨后的智慧与客观象征。你拥有犀利的洞察力和独立思考的能力，能清晰地划分界限。运用这份智慧去公正地判断，但别忘了一点悲悯的温度。",
+    reversedKeywords:"冷酷|苦涩|孤立|过度理性", reversed:"逆位宝剑王后暗示理性过了头，变成了冷酷与刻薄。你可能因过往伤痛而筑起高墙，以疏离的姿态对人。记住，真正的智慧需要慈悲的温度来调和。"},
+  {id:63, arcana:"minor", name:"宝剑国王", symbol:"🤴", uprightKeywords:"权威|智慧|法律|真知", upright:"宝剑国王是思想与法律领域的最高权威。你拥有成熟的分析能力和清晰的道德标准。以理智与公正来决断事务，用知识与经验来领导。你的话语掷地有声。",
+    reversedKeywords:"暴虐|不公|知识滥用|控制", reversed:"逆位宝剑国王警示信息与权力的滥用。一个冷酷的权威形象正在以智识为武器操纵和打压他人。反思你是否在用逻辑掩饰私心，或正受到这样的压制。"},
+
+  // === 小阿尔卡纳：星币 (64-77) ===
+  {id:64, arcana:"minor", name:"星币王牌", symbol:"🪙", uprightKeywords:"财富|机会|新事业|物质开端", upright:"星币王牌是一枚从云中递出的金色硬币，象征物质丰饶的全新开端。一个新的工作机会、投资或收入渠道正在降临。抓住这个实在的机遇，用勤奋和耐心将其培育成丰硕的果实。",
+    reversedKeywords:"错失机会|财务损失|物质拖延|贪婪", reversed:"逆位星币王牌暗示一次金钱或事业上的机会可能擦肩而过。小心财务上的不当决策带来的损失，或你正被贪婪遮蔽了双眼。重新审视基础，稳扎稳打。"},
+  {id:65, arcana:"minor", name:"星币二", symbol:"🎭", uprightKeywords:"平衡|应变|多任务|弹性", upright:"星币二描绘一人如杂耍般平衡两枚金币。你正在同时处理多项事务，在起伏的市场或生活中保持平衡。灵活应变是你的天赋，但要记得核心目标不要被忙碌冲淡。",
+    reversedKeywords:"失衡|混乱|财务困难|不堪重负", reversed:"逆位星币二是平衡被打破的信号。你可能不堪重负，财务或时间管理失去了掌控。停下杂耍，优先处理最关键的事务，做好减法的艺术。"},
+  {id:66, arcana:"minor", name:"星币三", symbol:"🏗️", uprightKeywords:"团队合作|技艺|蓝图|实现", upright:"星币三描绘工匠在教堂中专注工作。你的技能和团队合作正在将一个宏伟蓝图构建成现实。这是精进技艺、获得认可的时刻。你的专业能力和团队贡献正在发光。",
+    reversedKeywords:"缺乏协作|偷工减料|团队不和|倒退", reversed:"逆位星币三暗示团队合作出现了裂缝。工作质量可能被忽视，或你的努力未能得到认可。审视合作模式与自身技能，回归基本功的打磨。"},
+  {id:67, arcana:"minor", name:"星币四", symbol:"🔒", uprightKeywords:"储蓄|安全|保守|控制欲", upright:"星币四描绘一个紧抓金币不肯放手的人。你正进入一种保守的财务或情感状态。适度储蓄是智慧的，但过度的控制欲会阻碍流动。守住财富的同时，别忘了生活的真正价值。",
+    reversedKeywords:"挥霍|放手|金钱焦虑|失去稳定", reversed:"逆位星币四暗示守财奴的城墙出现了裂缝。你可能在非理性地挥霍，或被迫失去了一直紧握的东西。学会放手与流通，金钱是能量的交换而非囤积的物品。"},
+  {id:68, arcana:"minor", name:"星币五", symbol:"🥶", uprightKeywords:"匮乏|寒冷|孤立|信仰考验", upright:"星币五描绘两个在风雪中蹒跚的路人。你可能正在经历一段物质或精神上的匮乏期，感到被孤立和寒冷。但请记住，身后教堂的灯光仍在。在最困难的时刻，信仰是最后的庇护所。",
+    reversedKeywords:"走出困境|重拾信仰|转机|援助", reversed:"逆位星币五是风雪即将停歇的信号。物质上的困境正在缓解，被孤立的感受也开始融化。你找到了内心的信仰或外界伸来的援手。寒冬将尽。"},
+  {id:69, arcana:"minor", name:"星币六", symbol:"🤝", uprightKeywords:"慷慨|施与受|资源分配|感恩", upright:"星币六描绘一位富商将金币分予需要的人。这是施与受的平衡时刻。你可能在给予或接受帮助。无论是哪种角色，都保持慷慨与感恩的心态，宇宙的能量在流动中倍增。",
+    reversedKeywords:"吝啬|不平等|借贷危机|权力滥用", reversed:"逆位星币六暗示给予与接受出现了问题。某人可能吝啬地克扣应给的部分，或一段借贷关系变得紧张。警惕利用资源进行控制的权力游戏。"},
+  {id:70, arcana:"minor", name:"星币七", symbol:"🌱", uprightKeywords:"耐心|评估|耕耘|长远眼光", upright:"星币七描绘一个农夫驻足审视他浇灌的作物。一段辛勤耕耘后，到了评估成果的时刻。你在考虑是否值得继续投入。耐心等待，果实即将成熟，长远眼光会让你做出正确决定。",
+    reversedKeywords:"急功近利|投资失败|半途而废|浪费", reversed:"逆位星币七暗示了急功近利或半途而废的风险。你的投资或努力可能未见预期的回报，导致心生动摇。不要轻言放弃，也审慎判断是否方向有误。"},
+  {id:71, arcana:"minor", name:"星币八", symbol:"🔨", uprightKeywords:"精进|专精|勤奋|匠心", upright:"星币八描绘一位工匠全神贯注地雕琢一枚枚星币。这是沉浸于技艺与工作的神圣时刻。忘我的专注与重复将你推向大师之境。坚持下去，每一锤都是通往卓越的基石。",
+    reversedKeywords:"倦怠|敷衍|缺乏灵感|工作狂", reversed:"逆位星币八警示你正在机械地重复工作，失去了灵魂和创造力。倦怠与敷衍悄悄侵蚀着你的成果。休息一下，重新找回工作的意义与乐趣。"},
+  {id:72, arcana:"minor", name:"星币九", symbol:"🦜", uprightKeywords:"独立|自足|精致|成就", upright:"星币九描绘一位优雅独立的贵妇在自己的花园中。你已通过努力获得了物质的独立与精致的生活品味。享受这份从容与自我满足，这是对自己辛勤付出的回报。你值得拥有这一切。",
+    reversedKeywords:"财务不稳|依赖他人|空洞|焦虑", reversed:"逆位星币九提示表面的精致可能掩盖了内在的不安。你可能面临财务的波动，或虽然物质丰足内心却深感空虚。不要用外在的排场掩盖内在的不安。"},
+  {id:73, arcana:"minor", name:"星币十", symbol:"🏰", uprightKeywords:"家族财富|传承|安全|长期成功", upright:"星币十是物质世界的终极成就——家族、财富与传承。你正在享受长期努力带来的稳定果实。这是一段关于根基、遗产与世代繁荣的祝福。珍惜并善加守护这来之不易的根基。",
+    reversedKeywords:"家族纠纷|遗产争执|财务崩塌|根基不稳", reversed:"逆位星币十暗示家庭财务上的纠纷与根基动摇。一场关于金钱或遗产的争吵正在侵蚀亲情的纽带，或长期构建的财富面临着意想不到的崩塌。先稳住根基，再谈传承。"},
+  {id:74, arcana:"minor", name:"星币侍从", symbol:"🧑", uprightKeywords:"学习|务实|新技能|稳定成长", upright:"星币侍从捧着金币专注地研读。一个学习新技能、开启务实计划的好时机到了。从基础做起，脚踏实地。这份认真与耐心会为你未来的财富和成就打下最坚实的根基。",
+    reversedKeywords:"懒散|缺乏规划|学习受阻|浪费", reversed:"逆位星币侍从暗示学习计划的拖延或物质上的随意。你可能缺乏自律和规划，导致机会白白流失。拿起书本或计划表，从小处开始找回秩序。"},
+  {id:75, arcana:"minor", name:"星币骑士", symbol:"🏇", uprightKeywords:"务实|责任|稳步推进|坚定", upright:"星币骑士缓慢而坚定地骑在黑马上，是责任与务实的典范。他不追求速度，只追求稳如磐石的推进。以这样的态度对待工作与生活，每一步都将踏出坚实而可靠的脚印。",
+    reversedKeywords:"停滞|平庸|拖延|缺乏野心", reversed:"逆位星币骑士暗示过分谨慎导致了进展的停滞。你可能陷入了一成不变的平庸之中，对任何改变都充满抗拒。找到安全与进取之间更好的平衡点。"},
+  {id:76, arcana:"minor", name:"星币王后", symbol:"👸", uprightKeywords:"务实|滋养|慷慨|安全感", upright:"星币王后是物质世界仁慈而睿智的守护者。她既务实又慷慨，将资源用在滋养自己与周围人上。发挥你善用财富与资源的智慧，创造一个温暖而富足的环境。",
+    reversedKeywords:"吝啬|物质焦虑|依赖|资源匮乏", reversed:"逆位星币王后暗示对物质的过度依恋与焦虑。你可能变得斤斤计较，或被对贫穷的恐惧所支配。放下对物质的执念，安全感的真正源头在内心。"},
+  {id:77, arcana:"minor", name:"星币国王", symbol:"🤴", uprightKeywords:"财富|稳定|商业头脑|成就", upright:"星币国王稳坐于富饶的宝座之上，是物质世界最终的成功象征。你的商业头脑、勤奋与务实为你带来了稳固的财富和地位。以成熟和慷慨的态度管理你的王国，基业长青。",
+    reversedKeywords:"贪婪|腐败|破产|物质至上", reversed:"逆位星币国王警示对财富的贪婪可能腐蚀灵魂。一个唯利是图的形象正在为金钱牺牲道德，或你正面临财务上的重大危机。回归金钱只是工具的认知，修复价值观。"},
+];
+
+// ==================== 星空粒子动画 ====================
+(function initParticles() {
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const STAR_COUNT = Math.min(120, Math.floor(window.innerWidth * window.innerHeight / 8000));
+  for (let i = 0; i < STAR_COUNT; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.3,
+      opacity: Math.random(),
+      speed: Math.random() * 0.3 + 0.1,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const now = Date.now() / 1000;
+    for (const s of stars) {
+      const a = s.opacity * (0.4 + 0.6 * Math.sin(now * s.speed + s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,170,120,${a.toFixed(2)})`;
+      ctx.fill();
+      // 偶尔的紫色星点
+      if (Math.random() < 0.003) {
+        ctx.fillStyle = `rgba(160,100,220,${(a * 0.6).toFixed(2)})`;
+        ctx.fill();
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ==================== 主逻辑 ====================
+let currentDrawResult = null;
+let isAnimating = false;
+
+function getRandomCard() {
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  const cardIndex = arr[0] % 78;
+  const orientationBit = arr[0] % 2; // 0=正位, 1=逆位
+  return {
+    card: TAROT_DECK[cardIndex],
+    upright: orientationBit === 0
+  };
+}
+
+function startShuffle() {
+  const btnStart = document.getElementById('btnStart');
+  const shuffleArea = document.getElementById('shuffleArea');
+  const cardWrapper = document.getElementById('cardWrapper');
+  const readingSection = document.getElementById('readingSection');
+  
+  btnStart.classList.add('hidden');
+  readingSection.classList.add('hidden');
+  cardWrapper.classList.add('hidden');
+  
+  // 重置卡牌
+  const card = document.getElementById('card');
+  card.classList.remove('flipped');
+  
+  // 显示洗牌区
+  shuffleArea.classList.remove('hidden');
+  
+  // 洗牌动画
+  const shuffleCard = document.getElementById('shuffleCard');
+  const symbols = ['🔮','🌙','⭐','☀️','🪄','👑','💀','🏰','🦁','☸️','🪙','⚔️','🏆','🛡️','🌊','👹','📿','💕','🪢'];
+  
+  let count = 0;
+  const maxCount = 30;
+  let intervalTime = 60;
+  
+  function tick() {
+    if (count >= maxCount) {
+      // 洗牌结束
+      shuffleCard.classList.remove('visible');
+      shuffleArea.classList.add('hidden');
+      showCardBack();
+      return;
+    }
+    
+    const sym = symbols[Math.floor(Math.random() * symbols.length)];
+    shuffleCard.textContent = sym;
+    shuffleCard.classList.add('visible');
+    
+    count++;
+    // 逐渐加快再放慢
+    if (count < maxCount * 0.6) {
+      intervalTime = Math.max(40, intervalTime - 3);
+    } else {
+      intervalTime = Math.min(200, intervalTime + 15);
+    }
+    
+    setTimeout(tick, intervalTime);
+  }
+  
+  tick();
+}
+
+function showCardBack() {
+  const cardWrapper = document.getElementById('cardWrapper');
+  cardWrapper.classList.remove('hidden');
+  // 加入出场动画
+  cardWrapper.style.animation = 'fadeInUp 0.4s ease-out';
+  setTimeout(() => { cardWrapper.style.animation = ''; }, 400);
+}
+
+function flipCard() {
+  if (isAnimating) return;
+  isAnimating = true;
+  
+  const card = document.getElementById('card');
+  const cardSymbol = document.getElementById('cardSymbol');
+  const cardName = document.getElementById('cardName');
+  const cardOrient = document.getElementById('cardOrient');
+  const readingSection = document.getElementById('readingSection');
+  
+  // 随机抽牌
+  currentDrawResult = getRandomCard();
+  const { card: cardData, upright } = currentDrawResult;
+  
+  // 填入牌面信息
+  cardSymbol.textContent = cardData.symbol;
+  cardName.textContent = cardData.name;
+  
+  // 正逆位标识
+  cardOrient.className = 'card-orientation';
+  cardOrient.textContent = upright ? '正 位' : '逆 位';
+  cardOrient.classList.add(upright ? 'orientation-upright' : 'orientation-reversed');
+  
+  // 翻牌
+  card.classList.add('flipped');
+  
+  // 填充解读
+  const tags = document.getElementById('tags');
+  const interpretation = document.getElementById('interpretation');
+  
+  const keywords = upright ? cardData.uprightKeywords : cardData.reversedKeywords;
+  const reading = upright ? cardData.upright : cardData.reversed;
+  
+  tags.innerHTML = keywords.split('|').map(k => `<span class="tag">${k}</span>`).join('');
+  interpretation.textContent = reading;
+  
+  // 延迟显示解读区
+  setTimeout(() => {
+    readingSection.classList.remove('hidden');
+    readingSection.style.animation = 'none';
+    readingSection.offsetHeight;
+    readingSection.style.animation = 'fadeInUp 0.6s ease-out';
+    isAnimating = false;
+  }, 900);
+}
+
+function resetReading() {
+  const readingSection = document.getElementById('readingSection');
+  const cardWrapper = document.getElementById('cardWrapper');
+  const card = document.getElementById('card');
+  
+  readingSection.classList.add('hidden');
+  card.classList.remove('flipped');
+  cardWrapper.classList.add('hidden');
+  
+  currentDrawResult = null;
+  
+  // 直接开始洗牌
+  setTimeout(startShuffle, 300);
+}
+</script>
+</body>
+</html>
