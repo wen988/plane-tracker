@@ -14,16 +14,33 @@ def load_latest():
     if not files: return {}
     with open(files[0], encoding="utf-8") as f:
         d = json.load(f)
-    return {"planes":d,"weather":{},"forecast":{"hourly":[]},"timestamp":""} if isinstance(d,list) else d
+    records = d if isinstance(d, list) else [d]
+    if not records: return {}
+    r = records[-1]
+    return {
+        "planes": r.get("planes", []),
+        "weather": r["weather"]["current"] if "weather" in r and "current" in r["weather"] else {},
+        "forecast": r["forecast"]["hourly"] if "forecast" in r and "hourly" in r["forecast"] else [],
+        "timestamp": r.get("timestamp", "")
+    }
 
 def load_history():
     files = sorted(glob.glob(os.path.join(DATA_DIR, "*.json")), reverse=True)[:168]
     recs = []
     for f in files:
         try:
-            with open(f, encoding="utf-8") as fp: d = json.load(fp)
-            recs.append({"planes":d,"weather":{},"forecast":{"hourly":[]},"timestamp":""} if isinstance(d,list) else d)
-        except: pass
+            with open(f, encoding="utf-8") as fp:
+                d = json.load(fp)
+            records = d if isinstance(d, list) else [d]
+            for r in records:
+                recs.append({
+                    "planes": r.get("planes", []),
+                    "weather": r.get("weather", {}),
+                    "forecast": r.get("forecast", {}),
+                    "timestamp": r.get("timestamp", "")
+                })
+        except:
+            pass
     return recs
 
 def make_index(data, records):
@@ -87,13 +104,13 @@ def make_index(data, records):
     hbars, hlabels = "", ""
     for h, v in hs:
         pct = v/hmax*100
-        hbars += f'<div class="bar" style="height:{pct}%"><span class="tip">{h}�? {v}�?/span></div>'
+        hbars += f'<div class="bar" style="height:{pct}%"><span class="tip">{h}时 {v}架</span></div>'
         hlabels += f"<span>{h}</span>"
     # daily bars
     dbars, dlabels = "", ""
     for d, v in ds:
         pct = v/dmax*100
-        dbars += f'<div class="bar" style="height:{pct}%"><span class="tip">{d}: {v}�?/span></div>'
+        dbars += f'<div class="bar" style="height:{pct}%"><span class="tip">{d}: {v}架</span></div>'
         dlabels += f"<span>{d[5:]}</span>"
 
     html = f'''<!DOCTYPE html><html lang="zh-CN"><head>
@@ -143,29 +160,29 @@ tr:hover td{{background:#f5f5f7}}
 <div style="font-size:15px;color:#86868b;margin-bottom:16px">藁城上空飞机追踪</div>
 <input type="password" id="pw" placeholder="输入密码" onkeydown="if(event.key==='Enter')unlock()">
 <button onclick="unlock()">解锁</button><div class="err" id="err">密码错误</div></div>
-<nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘/a></nav>
+<nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘</a></nav>
 <div class="container">
-<div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新�?{ts}</div></div>
+<div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新于 {ts}</div></div>
 <div class="stats"><div class="card"><div class="num">{total}</div><div class="lbl">追踪飞机</div></div>
 <div class="card"><div class="num">{in_air}</div><div class="lbl">空中飞行</div></div>
 <div class="card"><div class="num">{on_ground}</div><div class="lbl">地面停放</div></div>
-<div class="card"><div class="num">{cs_count}</div><div class="lbl">有呼�?/div></div></div>
-<div class="wxbar"><span>天气 <b>{wx_text}</b></span><span>温度 <b>{wx_temp}°C</b></span><span>湿度 <b>{wx_hum}%</b></span><span>风�?<b>{wx_wind} m/s</b></span></div>
+<div class="card"><div class="num">{cs_count}</div><div class="lbl">有呼号</div></div></div>
+<div class="wxbar"><span>天气 <b>{wx_text}</b></span><span>温度 <b>{wx_temp}°C</b></span><span>湿度 <b>{wx_hum}%</b></span><span>风速 <b>{wx_wind} m/s</b></span></div>
 <div id="map"></div>
 <div class="charts">
 <div class="chart-box"><h3>各时段飞机量</h3><div class="bars">{hbars}</div><div class="bar-labels">{hlabels}</div></div>
-<div class="chart-box"><h3>�?日峰�?/h3><div class="bars">{dbars}</div><div class="bar-labels">{dlabels}</div></div>
+<div class="chart-box"><h3>近日峰值</h3><div class="bars">{dbars}</div><div class="bar-labels">{dlabels}</div></div>
 </div>
 <div class="chart-box"><h3>飞机列表</h3>
-<table><thead><tr><th>呼号</th><th>ICAO24</th><th>高度(m)</th><th>速度(m/s)</th><th>航向</th><th>状�?/th></tr></thead><tbody>{rows}</tbody></table></div>
+<table><thead><tr><th>呼号</th><th>ICAO24</th><th>高度(m)</th><th>速度(m/s)</th><th>航向</th><th>状态</th></tr></thead><tbody>{rows}</tbody></table></div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-function unlock(){{crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x==="{PW_HASH}")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"}})}}
+function unlock(){{crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x=="{PW_HASH}")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"}})}}
 var m=L.map("map").setView([37.94,114.84],11);
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{{z}}/{{y}}/{{x}}",{{attribution:'&copy; Esri',maxZoom:18}}).addTo(m);
 var planes={json.dumps(pjs,ensure_ascii=False)};
-planes.forEach(function(p){{var ic=L.divIcon({{html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">�?/div>',className:"",iconSize:[22,22],iconAnchor:[11,11]}});L.marker([p.lat,p.lon],{{icon:ic}}).addTo(m).bindPopup("<b>"+p.cs+"</b><br>高度:"+p.alt.toFixed(0)+"m<br>速度:"+p.vel.toFixed(0)+"m/s")}})
+planes.forEach(function(p){{var ic=L.divIcon({{html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">✈</div>',className:"",iconSize:[22,22],iconAnchor:[11,11]}});L.marker([p.lat,p.lon],{{icon:ic}}).addTo(m).bindPopup("<b>"+p.cs+"</b><br>高度:"+p.alt.toFixed(0)+"m<br>速度:"+p.vel.toFixed(0)+"m/s")}})
 </script></body></html>'''
 
     with open(os.path.join(DOCS_DIR, "index.html"), "w", encoding="utf-8") as f:
@@ -179,7 +196,7 @@ def make_weather(data, records):
         wc = weather["current"]
     else:
         wc = weather if isinstance(weather, dict) else {}
-    fc = data.get("forecast", {}).get("hourly", [])
+    fc = data.get("forecast", [])
     wx_temp = wc.get("temperature_2m", "--")
     wx_hum = wc.get("relative_humidity_2m", "--")
     wx_wind = wc.get("wind_speed_10m", "--")
@@ -207,7 +224,7 @@ def make_weather(data, records):
 
     html = f'''<!DOCTYPE html><html lang="zh-CN"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="robots" content="noindex">
-<title>藁城 · 气象仪表盘/title>
+<title>藁城 · 气象仪表盘</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
@@ -235,23 +252,23 @@ th{{text-align:left;padding:8px 12px;color:#86868b;font-weight:500;border-bottom
 td{{padding:8px 12px;border-bottom:1px solid #f5f5f7}}
 tr:hover td{{background:#f5f5f7}}
 </style></head><body>
-<nav><a href="index.html">飞机追踪</a><a class="on" href="weather.html">气象仪表盘/a></nav>
+<nav><a href="index.html">飞机追踪</a><a class="on" href="weather.html">气象仪表盘</a></nav>
 <div class="container">
-<div class="header"><h1>藁城气象仪表盘/h1><div class="ts">更新�?{ts}</div></div>
+<div class="header"><h1>藁城气象仪表盘</h1><div class="ts">更新于 {ts}</div></div>
 <div class="stats">
 <div class="card"><div class="num">{wx_text}</div><div class="lbl">天气</div></div>
 <div class="card"><div class="num">{wx_temp}°C</div><div class="lbl">温度</div></div>
 <div class="card"><div class="num">{wx_hum}%</div><div class="lbl">湿度</div></div>
-<div class="card"><div class="num">{wx_wind}m/s</div><div class="lbl">风�?/div></div>
+<div class="card"><div class="num">{wx_wind}m/s</div><div class="lbl">风速</div></div>
 <div class="card"><div class="num">{wx_wdir}°</div><div class="lbl">风向</div></div>
 </div>
 <div class="charts">
 <div class="chart-box"><h3>24小时温度趋势</h3><canvas id="c1"></canvas></div>
 <div class="chart-box"><h3>24小时湿度趋势</h3><canvas id="c2"></canvas></div>
 <div class="chart-box"><h3>24小时降水概率</h3><canvas id="c3"></canvas></div>
-<div class="chart-box"><h3>24小时能见�?/h3><canvas id="c4"></canvas></div>
-<div class="chart-box"><h3>24小时风�?/h3><canvas id="c5"></canvas></div>
-<div class="chart-box"><h3>24小时风向风况详情</h3><table><thead><tr><th>时间</th><th>风向(°)</th><th>风�?m/s)</th><th>风况</th></tr></thead><tbody>{wrows}</tbody></table></div>
+<div class="chart-box"><h3>24小时能见度</h3><canvas id="c4"></canvas></div>
+<div class="chart-box"><h3>24小时风速</h3><canvas id="c5"></canvas></div>
+<div class="chart-box"><h3>24小时风向风况详情</h3><table><thead><tr><th>时间</th><th>风向(°)</th><th>风速(m/s)</th><th>风况</th></tr></thead><tbody>{wrows}</tbody></table></div>
 </div></div>
 <script>
 var d={cd};
@@ -271,6 +288,10 @@ def main():
     records = load_history()
     make_index(data, records)
     make_weather(data, records)
+    os.makedirs(os.path.join(DOCS_DIR, "data"), exist_ok=True)
+    with open(os.path.join(DOCS_DIR, "data", "latest.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print("latest.json written")
 
 if __name__ == "__main__":
     main()
