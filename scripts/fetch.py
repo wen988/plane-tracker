@@ -11,23 +11,23 @@ from pathlib import Path
 
 import requests
 
-# 石家庄及周边地理范围（覆盖市区、正定机场、晋州、栾城、邢台北部）
-LAMIN = 37.50   # 南
-LAMAX = 38.60   # 北
-LOMIN = 114.00  # 西
-LOMAX = 115.80  # 东
+# 石家庄及周边地理范围（覆盖石家庄、正定机场、北京南郊航线）
+LAMIN = 37.00   # 南
+LAMAX = 40.50   # 北
+LOMIN = 113.00  # 西
+LOMAX = 117.50  # 东
 
 API_URL = "https://opensky-network.org/api/states/all"
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 WEATHER_PARAMS = {
-    "latitude": 38.05,
-    "longitude": 114.90,
+    "latitude": 38.75,
+    "longitude": 115.25,
     "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,visibility",
 }
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 FORECAST_PARAMS = {
-    "latitude": 38.05,
-    "longitude": 114.90,
+    "latitude": 38.75,
+    "longitude": 115.25,
     "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability,wind_speed_10m,wind_direction_10m,weather_code,visibility",
     "timezone": "Asia/Shanghai",
     "forecast_days": 1,
@@ -107,7 +107,21 @@ def fetch_states() -> list:
                     data = r.json()
                     result = data.get("states") or data.get("states_list") or []
                     print(f"Auth success, got {len(result)} states")
-                    return result
+                    # Convert state arrays to dicts
+                    planes = []
+                    for s in (result or []):
+                        planes.append({
+                            "icao24": s[0] if len(s) > 0 else "",
+                            "callsign": (s[1] or "").strip(),
+                            "origin_country": s[2] if len(s) > 2 else "",
+                            "longitude": s[5] if len(s) > 5 else None,
+                            "latitude": s[6] if len(s) > 6 else None,
+                            "altitude": s[7] if len(s) > 7 else None,
+                            "on_ground": s[8] if len(s) > 8 else False,
+                            "velocity": s[9] if len(s) > 9 else None,
+                            "track": s[10] if len(s) > 10 else None,
+                        })
+                    return planes
             except Exception as e:
                 print(f"Auth failed: {e}, falling back to anonymous")
         
@@ -118,7 +132,20 @@ def fetch_states() -> list:
         data = r.json()
         result = data.get("states") or data.get("states_list") or []
         print(f"Anonymous success, got {len(result)} states")
-        return result
+        planes = []
+        for s in (result or []):
+            planes.append({
+                "icao24": s[0] if len(s) > 0 else "",
+                "callsign": (s[1] or "").strip(),
+                "origin_country": s[2] if len(s) > 2 else "",
+                "longitude": s[5] if len(s) > 5 else None,
+                "latitude": s[6] if len(s) > 6 else None,
+                "altitude": s[7] if len(s) > 7 else None,
+                "on_ground": s[8] if len(s) > 8 else False,
+                "velocity": s[9] if len(s) > 9 else None,
+                "track": s[10] if len(s) > 10 else None,
+            })
+        return planes
         
     except Exception as e:
         print(f"States fetch failed completely: {e}")
