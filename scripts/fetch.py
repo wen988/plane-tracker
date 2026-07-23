@@ -77,18 +77,10 @@ def fetch_weather() -> dict:
     try:
         r = requests.get(WEATHER_URL, params=WEATHER_PARAMS, timeout=10)
         r.raise_for_status()
-        c = r.json().get("current", {})
-        return {
-            "temperature": c.get("temperature_2m"),
-            "humidity": c.get("relative_humidity_2m"),
-            "wind_speed": c.get("wind_speed_10m"),
-            "wind_direction": c.get("wind_direction_10m"),
-            "weather_code": c.get("weather_code"),
-            "visibility": c.get("visibility"),
-        }
+        return r.json()  # 返回原始结构 {"current": {"temperature_2m": ..., ...}}
     except Exception as e:
         print(f"Weather fetch failed: {e}")
-        return {}
+        return {"current": {}}
 
 
 def fetch_forecast() -> dict:

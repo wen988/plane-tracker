@@ -163,7 +163,7 @@ tr:hover td{{background:#f5f5f7}}
 <script>
 function unlock(){{crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x==="{PW_HASH}")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"}})}}
 var m=L.map("map").setView([37.94,114.84],11);
-L.tileLayer("https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png",{{attribution:'&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:18}}).addTo(m);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{{z}}/{{y}}/{{x}}",{attribution:'&copy; Esri',maxZoom:18}).addTo(m);
 var planes={json.dumps(pjs,ensure_ascii=False)};
 planes.forEach(function(p){{var ic=L.divIcon({{html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">✈</div>',className:"",iconSize:[22,22],iconAnchor:[11,11]}});L.marker([p.lat,p.lon],{{icon:ic}}).addTo(m).bindPopup("<b>"+p.cs+"</b><br>高度:"+p.alt.toFixed(0)+"m<br>速度:"+p.vel.toFixed(0)+"m/s")}})
 </script></body></html>'''
