@@ -1,9 +1,9 @@
 {
   "planes": [],
   "weather": {
-    "time": "2026-07-23T07:00",
+    "time": "2026-07-23T07:15",
     "interval": 900,
-    "temperature_2m": 29.9,
+    "temperature_2m": 30.0,
     "relative_humidity_2m": 58,
     "wind_speed_10m": 5.2,
     "wind_direction_10m": 106,
@@ -252,5 +252,5 @@
       "visibility": 7040.0
     }
   ],
-  "timestamp": "2026-07-23T15:10:05.112292+08:00"
+  "timestamp": "2026-07-23T15:28:24.253092+08:00"
 }
