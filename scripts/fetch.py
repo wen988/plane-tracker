@@ -44,32 +44,50 @@ tz = timezone(timedelta(hours=8))  # UTC+8
 
 
 def fetch_states() -> list[dict]:
+    """抓取藁城区上空飞机状态（带 OpenSky 认证）"""
+    import os
+    client_id = os.environ.get("OPENSKY_CLIENT_ID", "")
+    client_secret = os.environ.get("OPENSKY_CLIENT_SECRET", "")
     params = {
         "lamin": LAMIN,
         "lomin": LOMIN,
         "lamax": LAMAX,
         "lomax": LOMAX,
     }
-    r = requests.get(API_URL, params=params, headers=HEADERS, timeout=30)
-    r.raise_for_status()
-    data = r.json()
-
-    states = data.get("states") or []
-    result = []
-    for s in states:
-        result.append({
-            "icao24":      s[0],
-            "callsign":    (s[1] or "").strip(),
-            "origin":      s[2] or "",
-            "longitude":   s[5],
-            "latitude":    s[6],
-            "altitude":    s[7],
-            "on_ground":   s[8],
-            "velocity":    s[9],
-            "heading":     s[10],
-            "vertical":    s[11],
-        })
-    return result
+    try:
+        if client_id and client_secret:
+            auth_resp = requests.post(
+                "https://opensky-network.org/api/token",
+                json={"client_id": client_id, "client_secret": client_secret},
+                timeout=10
+            )
+            auth_resp.raise_for_status()
+            token = auth_resp.json().get("access_token", "")
+            req_headers = {**HEADERS, "Authorization": f"Bearer {token}"}
+            r = requests.get(API_URL, params=params, headers=req_headers, timeout=30)
+        else:
+            r = requests.get(API_URL, params=params, headers=HEADERS, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        states = data.get("states") or []
+        result = []
+        for s in states:
+            result.append({
+                "icao24":      s[0],
+                "callsign":    (s[1] or "").strip(),
+                "origin":      s[2] or "",
+                "longitude":   s[5],
+                "latitude":    s[6],
+                "altitude":    s[7],
+                "on_ground":   s[8],
+                "velocity":    s[9],
+                "heading":     s[10],
+                "vertical":    s[11],
+            })
+        return result
+    except Exception as e:
+        print(f"States fetch failed: {e}")
+        return []
 
 
 def fetch_weather() -> dict:
