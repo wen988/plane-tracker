@@ -162,14 +162,14 @@ footer span{margin:0 8px;color:#d2d2d7}
         <div class="cover-preview" id="coverPreview" style="display:none">
           <img id="coverImage" src="" alt="封面">
         </div>
-        <a class="btn-download primary" id="downloadVideo" href="#" target="_blank">
+        <button class="btn-download primary" id="downloadVideo" onclick="downloadBlob(currentVideoUrl, 'video.mp4')" style="display:none">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           下载无水印视频
-        </a>
-        <a class="btn-download secondary" id="downloadMusic" href="#" target="_blank">
+        </button>
+        <button class="btn-download secondary" id="downloadMusic" onclick="downloadBlob(currentMusicUrl, 'music.mp3')" style="display:none">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           下载背景音乐
-        </a>
+        </button>
       </div>
     </div>
   </div>
@@ -278,6 +278,9 @@ function showError(msg) {
   setTimeout(() => errorText.classList.remove('show'), 5000);
 }
 
+let currentVideoUrl = '';
+let currentMusicUrl = '';
+
 function showResult(data) {
   const section = document.getElementById('resultSection');
   section.classList.add('show');
@@ -307,12 +310,67 @@ function showResult(data) {
     videoPlayer.style.display = 'block';
   }
 
-  // 下载按钮
-  document.getElementById('downloadVideo').href = data.video_url || '#';
-  document.getElementById('downloadMusic').href = data.music_url || '#';
+  // 下载按钮 - 存 URL 并显示
+  currentVideoUrl = data.video_url || '';
+  currentMusicUrl = data.music_url || '';
+  document.getElementById('downloadVideo').style.display = currentVideoUrl ? 'flex' : 'none';
+  document.getElementById('downloadMusic').style.display = currentMusicUrl ? 'flex' : 'none';
 
   // 滚动到结果区
   section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ========== Blob 下载（解决跨域 download 属性失效） ==========
+async function downloadBlob(url, filename) {
+  if (!url) return;
+  const btn = event.target.closest('button');
+  const origText = btn.innerHTML;
+
+  // 显示下载进度
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 10"/></svg> 下载中...';
+  btn.style.pointerEvents = 'none';
+  btn.style.opacity = '0.7';
+
+  try {
+    // 通过 Worker 代理下载以获取 CORS 支持
+    const proxyUrl = `${API_BASE}?url=${encodeURIComponent(url)}&download=1`;
+    const resp = await fetch(proxyUrl);
+    if (!resp.ok) throw new Error('下载失败');
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch (e) {
+    // Worker 代理不通时，尝试直链下载
+    try {
+      const resp = await fetch(url, { mode: 'cors' });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      } else {
+        throw new Error('直链也失败');
+      }
+    } catch (e2) {
+      // 最终兜底：新窗口打开直链（浏览器可能行为不一致）
+      window.open(url, '_blank');
+    }
+  }
+
+  btn.innerHTML = origText;
+  btn.style.pointerEvents = '';
+  btn.style.opacity = '';
 }
 
 // ========== 解析逻辑 ==========

@@ -13,6 +13,7 @@ const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleW
 async function handleRequest(request) {
   const url = new URL(request.url);
   const videoUrl = url.searchParams.get('url');
+  const isDownload = url.searchParams.get('download') === '1';
 
   // CORS 预检
   if (request.method === 'OPTIONS') {
@@ -21,6 +22,11 @@ async function handleRequest(request) {
 
   if (!videoUrl) {
     return jsonResponse({ error: '缺少 url 参数' }, 400);
+  }
+
+  // 下载代理模式：直接转发二进制内容
+  if (isDownload) {
+    return proxyDownload(videoUrl);
   }
 
   try {
@@ -214,6 +220,25 @@ async function parseKuaishou(shareUrl) {
 }
 
 // ==================== 工具函数 ====================
+
+// 下载代理：直接转发远程文件二进制内容，解决跨域下载问题
+async function proxyDownload(targetUrl) {
+  const resp = await fetch(targetUrl, {
+    headers: { 'User-Agent': MOBILE_UA }
+  });
+  const contentType = resp.headers.get('Content-Type') || 'application/octet-stream';
+  const contentLength = resp.headers.get('Content-Length');
+
+  const headers = {
+    'Content-Type': contentType,
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Expose-Headers': 'Content-Disposition',
+    'Cache-Control': 'public, max-age=3600'
+  };
+  if (contentLength) headers['Content-Length'] = contentLength;
+
+  return new Response(resp.body, { status: 200, headers });
+}
 
 function jsonResponse(data, status = 200) {
   const body = JSON.stringify(data);
