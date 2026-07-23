@@ -1,14 +1,14 @@
 {
   "planes": [],
   "weather": {
-    "time": "2026-07-23T10:30",
+    "time": "2026-07-23T10:45",
     "interval": 900,
-    "temperature_2m": 29.0,
-    "relative_humidity_2m": 67,
-    "wind_speed_10m": 2.7,
-    "wind_direction_10m": 98,
+    "temperature_2m": 28.6,
+    "relative_humidity_2m": 71,
+    "wind_speed_10m": 2.5,
+    "wind_direction_10m": 111,
     "weather_code": 3,
-    "visibility": 9800.0
+    "visibility": 9520.0
   },
   "forecast": [
     {
@@ -252,5 +252,5 @@
       "visibility": 7060.0
     }
   ],
-  "timestamp": "2026-07-23T18:39:09.238621+08:00"
+  "timestamp": "2026-07-23T18:52:09.324092+08:00"
 }
