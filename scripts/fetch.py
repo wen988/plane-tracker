@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 抓取石家庄及周边上空飞机数据（OpenSky Network API）
 坐标范围：纬度 37.5~38.6，经度 114.0~115.8（覆盖石家庄市区、正定机场、晋州、栾城、邢台北部）"""
@@ -40,9 +40,10 @@ HEADERS = {
 }
 
 def _retry_get(url, **kwargs):
+    timeout = kwargs.pop("timeout", 60)
     for i in range(3):
         try:
-            return requests.get(url, timeout=60, **kwargs)
+            return requests.get(url, timeout=timeout, **kwargs)
         except requests.exceptions.Timeout:
             print(f"GET timeout attempt {i+1}/3, retrying...")
             time.sleep(10)
@@ -52,9 +53,10 @@ def _retry_get(url, **kwargs):
     raise Exception("All 3 GET attempts failed")
 
 def _retry_post(url, **kwargs):
+    timeout = kwargs.pop("timeout", 60)
     for i in range(3):
         try:
-            return requests.post(url, timeout=60, **kwargs)
+            return requests.post(url, timeout=timeout, **kwargs)
         except requests.exceptions.Timeout:
             print(f"POST timeout attempt {i+1}/3, retrying...")
             time.sleep(10)
@@ -204,3 +206,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
