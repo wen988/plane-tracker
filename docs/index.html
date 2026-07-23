@@ -45,27 +45,27 @@ tr:hover td{background:#f5f5f7}
 <div style="font-size:15px;color:#86868b;margin-bottom:16px">藁城上空飞机追踪</div>
 <input type="password" id="pw" placeholder="输入密码" onkeydown="if(event.key==='Enter')unlock()">
 <button onclick="unlock()">解锁</button><div class="err" id="err">密码错误</div></div>
-<nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘/a></nav>
+<nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘</a></nav>
 <div class="container">
-<div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新�?</div></div>
-<div class="stats"><div class="card"><div class="num">13</div><div class="lbl">追踪飞机</div></div>
-<div class="card"><div class="num">13</div><div class="lbl">空中飞行</div></div>
+<div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新于 2026-07-23T15:10:05.112292+08:00</div></div>
+<div class="stats"><div class="card"><div class="num">0</div><div class="lbl">追踪飞机</div></div>
+<div class="card"><div class="num">0</div><div class="lbl">空中飞行</div></div>
 <div class="card"><div class="num">0</div><div class="lbl">地面停放</div></div>
-<div class="card"><div class="num">0</div><div class="lbl">有呼�?/div></div></div>
-<div class="wxbar"><span>天气 <b>--</b></span><span>温度 <b>--°C</b></span><span>湿度 <b>--%</b></span><span>风�?<b>-- m/s</b></span></div>
+<div class="card"><div class="num">0</div><div class="lbl">有呼号</div></div></div>
+<div class="wxbar"><span>天气 <b>阴</b></span><span>温度 <b>29.9°C</b></span><span>湿度 <b>58%</b></span><span>风速 <b>5.2 m/s</b></span></div>
 <div id="map"></div>
 <div class="charts">
-<div class="chart-box"><h3>各时段飞机量</h3><div class="bars"></div><div class="bar-labels"></div></div>
-<div class="chart-box"><h3>�?日峰�?/h3><div class="bars"><div class="bar" style="height:100.0%"><span class="tip">: 13�?/span></div></div><div class="bar-labels"><span></span></div></div>
+<div class="chart-box"><h3>各时段飞机量</h3><div class="bars"><div class="bar" style="height:0.0%"><span class="tip">00时 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">01时 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">02时 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">03时 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">07时 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">11时 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">14时 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">15时 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">22时 0架</span></div></div><div class="bar-labels"><span>00</span><span>01</span><span>02</span><span>03</span><span>07</span><span>11</span><span>14</span><span>15</span><span>22</span></div></div>
+<div class="chart-box"><h3>近日峰值</h3><div class="bars"><div class="bar" style="height:0.0%"><span class="tip">2026-07-22: 0架</span></div><div class="bar" style="height:0.0%"><span class="tip">2026-07-23: 0架</span></div></div><div class="bar-labels"><span>07-22</span><span>07-23</span></div></div>
 </div>
 <div class="chart-box"><h3>飞机列表</h3>
-<table><thead><tr><th>呼号</th><th>ICAO24</th><th>高度(m)</th><th>速度(m/s)</th><th>航向</th><th>状�?/th></tr></thead><tbody><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr><tr><td>-</td><td></td><td>0</td><td>0</td><td>0°</td><td>空中</td></tr></tbody></table></div>
+<table><thead><tr><th>呼号</th><th>ICAO24</th><th>高度(m)</th><th>速度(m/s)</th><th>航向</th><th>状态</th></tr></thead><tbody></tbody></table></div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-function unlock(){crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x==="ed9b7dfe821ab674871bc9244d80bae4e8d6dbe5122f34247b8c2854e6cc525e")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"})}
+function unlock(){crypto.subtle.digest("SHA-256",new TextEncoder().encode(document.getElementById("pw").value)).then(h=>{let x=Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");if(x=="ed9b7dfe821ab674871bc9244d80bae4e8d6dbe5122f34247b8c2854e6cc525e")document.getElementById("lock").style.display="none";else document.getElementById("err").style.display="block"})}
 var m=L.map("map").setView([37.94,114.84],11);
 L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{attribution:'&copy; Esri',maxZoom:18}).addTo(m);
 var planes=[];
-planes.forEach(function(p){var ic=L.divIcon({html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">�?/div>',className:"",iconSize:[22,22],iconAnchor:[11,11]});L.marker([p.lat,p.lon],{icon:ic}).addTo(m).bindPopup("<b>"+p.cs+"</b><br>高度:"+p.alt.toFixed(0)+"m<br>速度:"+p.vel.toFixed(0)+"m/s")})
+planes.forEach(function(p){var ic=L.divIcon({html:'<div style="font-size:18px;transform:rotate('+p.trk+'deg)">✈</div>',className:"",iconSize:[22,22],iconAnchor:[11,11]});L.marker([p.lat,p.lon],{icon:ic}).addTo(m).bindPopup("<b>"+p.cs+"</b><br>高度:"+p.alt.toFixed(0)+"m<br>速度:"+p.vel.toFixed(0)+"m/s")})
 </script></body></html>
