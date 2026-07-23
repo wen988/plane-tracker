@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """藁城上空 - 飞机追踪 + 气象仪表盘"""
-import json, os, glob, hashlib
+import json, os, glob, hashlib, datetime
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "docs")
 PW_HASH = hashlib.sha256("gaocheng".encode()).hexdigest()
 
 WX_CN = {0:"晴",1:"少云",2:"多云",3:"阴",45:"雾",48:"雾凇",51:"小毛毛雨",53:"中毛毛雨",55:"大毛毛雨",61:"小雨",63:"中雨",65:"大雨",71:"小雪",73:"中雪",75:"大雪",80:"阵雨",81:"中阵雨",82:"大阵雨",95:"雷暴",96:"冰雹雷暴",99:"大冰雹雷暴"}
+
+def fmt_time(ts):
+    """Convert ISO timestamp to Chinese readable format"""
+    try:
+        dt = datetime.datetime.fromisoformat(ts.replace("Z","+00:00").split("+")[0])
+        return dt.strftime("%m月%d日 %H:%M")
+    except:
+        return ts
 
 def load_latest():
     files = sorted(glob.glob(os.path.join(DATA_DIR, "*.json")), reverse=True)
@@ -162,7 +170,7 @@ tr:hover td{{background:#f5f5f7}}
 <button onclick="unlock()">解锁</button><div class="err" id="err">密码错误</div></div>
 <nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘</a></nav>
 <div class="container">
-<div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新于 {ts}</div></div>
+<div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新于 {fmt_time(ts)}</div></div>
 <div class="stats"><div class="card"><div class="num">{total}</div><div class="lbl">追踪飞机</div></div>
 <div class="card"><div class="num">{in_air}</div><div class="lbl">空中飞行</div></div>
 <div class="card"><div class="num">{on_ground}</div><div class="lbl">地面停放</div></div>
@@ -204,7 +212,7 @@ def make_weather(data, records):
     wx_code = wc.get("weather_code", -1)
     wx_text = WX_CN.get(wx_code, "--")
 
-    times = [h.get("time","")[-8:-3] for h in fc[:48]]
+    times = [fmt_time(h.get("time",""))[-11:] for h in fc[:48]]
     temps = [h.get("temperature", h.get("temperature_2m",0)) for h in fc[:48]]
     humids = [h.get("humidity", h.get("relative_humidity_2m",0)) for h in fc[:48]]
     precip = [h.get("precip_prob", h.get("precipitation_probability",0)) or 0 for h in fc[:48]]
@@ -254,7 +262,7 @@ tr:hover td{{background:#f5f5f7}}
 </style></head><body>
 <nav><a href="index.html">飞机追踪</a><a class="on" href="weather.html">气象仪表盘</a></nav>
 <div class="container">
-<div class="header"><h1>藁城气象仪表盘</h1><div class="ts">更新于 {ts}</div></div>
+<div class="header"><h1>藁城气象仪表盘</h1><div class="ts">更新于 {fmt_time(ts)}</div></div>
 <div class="stats">
 <div class="card"><div class="num">{wx_text}</div><div class="lbl">天气</div></div>
 <div class="card"><div class="num">{wx_temp}°C</div><div class="lbl">温度</div></div>
@@ -274,8 +282,8 @@ tr:hover td{{background:#f5f5f7}}
 var d={cd};
 var o={{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}},scales:{{x:{{ticks:{{color:"#86868b",font:{{size:10}},maxTicksLimit:12}},grid:{{color:"#e5e5ea"}}}},y:{{ticks:{{color:"#86868b",font:{{size:10}}}},grid:{{color:"#e5e5ea"}}}}}}}};
 function L(id,vals,color){{new Chart(document.getElementById(id),{{type:"line",data:{{labels:d.labels,datasets:[{{data:vals,borderColor:color,backgroundColor:color+"18",fill:true,tension:.4,pointRadius:2}}]}},options:o}})}}
-function B(id,vals){{new Chart(document.getElementById(id),{{type:"bar",data:{{labels:d.labels,datasets:[{{data:vals,backgroundColor:vals.map(function(v){{return v>50?"#ef4444":v>20?"#f59e0b":"#0071e3"}}),borderRadius:4}}]}},options:o}})}}
-if(d.labels.length){{L("c1",d.temp,"#0071e3");L("c2",d.humid,"#a78bfa");B("c3",d.precip);L("c4",d.vis,"#34d399");L("c5",d.wind,"#f97316")}}
+function B(id,vals){{new Chart(document.getElementById(id),{{type:"bar",data:{{labels:d.labels,datasets:[{{data:vals,backgroundColor:vals.map(function(v){{return "rgba(0,113,227,"+(0.2+v/100*0.7)+")"}}),borderRadius:4}}]}},options:o}})}}
+if(d.labels.length){{L("c1",d.temp,"rgba(0,113,227,0.9)");L("c2",d.humid,"#a78bfa");B("c3",d.precip);L("c4",d.vis,"#34d399");L("c5",d.wind,"#f97316")}}
 </script></body></html>'''
 
     with open(os.path.join(DOCS_DIR, "weather.html"), "w", encoding="utf-8") as f:

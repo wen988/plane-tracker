@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-抓取藁城区上空飞机数据（OpenSky Network API）
-坐标范围：纬度 37.95~38.1，经度 114.7~115.0（覆盖藁城及周边）
-"""
+抓取石家庄及周边上空飞机数据（OpenSky Network API）
+坐标范围：纬度 37.5~38.6，经度 114.0~115.8（覆盖石家庄市区、正定机场、晋州、栾城、邢台北部）"""
 
 import json
 import os
@@ -12,23 +11,23 @@ from pathlib import Path
 
 import requests
 
-# 藁城区地理范围（稍微放大覆盖周边航线）
-LAMIN = 37.90   # 南
-LAMAX = 38.15   # 北
-LOMIN = 114.60  # 西
-LOMAX = 115.05  # 东
+# 石家庄及周边地理范围（覆盖市区、正定机场、晋州、栾城、邢台北部）
+LAMIN = 37.50   # 南
+LAMAX = 38.60   # 北
+LOMIN = 114.00  # 西
+LOMAX = 115.80  # 东
 
 API_URL = "https://opensky-network.org/api/states/all"
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 WEATHER_PARAMS = {
-    "latitude": 37.97,
-    "longitude": 114.85,
+    "latitude": 38.05,
+    "longitude": 114.90,
     "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,visibility",
 }
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 FORECAST_PARAMS = {
-    "latitude": 37.97,
-    "longitude": 114.85,
+    "latitude": 38.05,
+    "longitude": 114.90,
     "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability,wind_speed_10m,wind_direction_10m,weather_code,visibility",
     "timezone": "Asia/Shanghai",
     "forecast_days": 1,
@@ -44,7 +43,7 @@ tz = timezone(timedelta(hours=8))  # UTC+8
 
 
 def fetch_states() -> list[dict]:
-    """抓取藁城区上空飞机状态（带 OpenSky 认证）"""
+    """抓取石家庄及周边上空飞机状态（带 OpenSky 认证）"""
     import os
     client_id = os.environ.get("OPENSKY_CLIENT_ID", "")
     client_secret = os.environ.get("OPENSKY_CLIENT_SECRET", "")
