@@ -132,7 +132,7 @@ def make_index(data, records):
 
     html = f'''<!DOCTYPE html><html lang="zh-CN"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="robots" content="noindex">
-<title>藁城上空 · 飞机追踪 v2</title>
+<title>藁城上空 · 飞机追踪 | 单反的雷达站 v2</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
