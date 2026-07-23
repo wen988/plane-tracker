@@ -163,59 +163,53 @@ function extractDouyinVideoId(url) {
 // ==================== 快手解析 ====================
 
 async function parseKuaishou(shareUrl) {
-  // 快手分享链接重定向后提取 photoId
+  // 直接访问分享页获取HTML（跟随重定向拿到完整页面）
   const resp = await fetch(shareUrl, {
-    redirect: 'manual',
-    headers: { 'User-Agent': MOBILE_UA }
-  });
-  
-  const location = resp.headers.get('Location') || '';
-  let photoId = '';
-
-  // 从重定向URL提取 photoId
-  const photoMatch = location.match(/photoId=(\w+)/);
-  if (photoMatch) {
-    photoId = photoMatch[1];
-  }
-  // 也可以从短链接路径提取
-  if (!photoId) {
-    const pathMatch = location.match(/\/(\w{15,})\b/);
-    if (pathMatch) photoId = pathMatch[1];
-  }
-
-  if (!photoId) {
-    throw new Error('无法提取快手视频ID');
-  }
-
-  // 请求快手API
-  const apiUrl = `https://v.m.chenzhongtech.com/rest/wd/photo/info?photoId=${photoId}`;
-  const apiResp = await fetch(apiUrl, {
     headers: {
       'User-Agent': MOBILE_UA,
-      'Referer': 'https://v.kuaishou.com/'
+      'Accept': 'text/html,application/xhtml+xml'
     }
   });
-  const data = await apiResp.json();
+  
+  const html = await resp.text();
 
-  if (data.result !== 1 || !data.photo) {
-    throw new Error('快手视频获取失败');
+  // 从HTML中提取视频地址（优先选高清 hd15）
+  const mp4Matches = [...html.matchAll(/(https?:\/\/[^"\s<>]+\.mp4[^"\s<>]*)/g)];
+  const mp4Urls = mp4Matches.map(m => m[1]);
+  const hdMp4 = mp4Urls.filter(u => u.includes('hd15'));
+  const videoUrl = hdMp4.length > 0 ? hdMp4[0] : (mp4Urls.length > 0 ? mp4Urls[0] : '');
+
+  // 从HTML提取封面图
+  let coverUrl = '';
+  const ogImage = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/);
+  if (ogImage) coverUrl = ogImage[1];
+  if (!coverUrl) {
+    const coverMatch = html.match(/(https?:\/\/[^"\s<>]*upic[^"\s<>]*\.(?:jpg|jpeg|png|webp)[^"\s<>]*)/i);
+    if (coverMatch) coverUrl = coverMatch[1];
   }
 
-  const photo = data.photo;
-  const mainUrl = photo.mainMvUrls?.[0]?.url || 
-                  photo.video?.url || 
-                  photo.watermarkMvUrls?.[0]?.url?.replace('watermark', 'main') || 
-                  '';
+  // 提取标题
+  let title = '';
+  const ogTitle = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/);
+  if (ogTitle && ogTitle[1] !== '快手') title = ogTitle[1];
+  if (!title) {
+    const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"/);
+    if (descMatch) title = descMatch[1];
+  }
+
+  if (!videoUrl) {
+    throw new Error('未在页面中找到视频地址');
+  }
 
   return {
-    title: photo.caption || '',
-    video_url: mainUrl,
-    music_url: photo.musicUrls?.[0]?.url || '',
-    cover_url: photo.coverUrls?.[0]?.url || '',
+    title,
+    video_url: videoUrl,
+    music_url: '',
+    cover_url: coverUrl,
     author: {
-      uid: photo.userId?.toString() || '',
-      name: photo.userName || '',
-      avatar: photo.headUrl || ''
+      uid: '',
+      name: '',
+      avatar: ''
     }
   };
 }
