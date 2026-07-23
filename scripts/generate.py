@@ -1,13 +1,13 @@
-﻿#!/usr/bin/env python3
-"""藁城上空 - 飞机追踪 + 气象仪表盘""
-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""藁城上空 - 飞机追踪 + 气象仪表盘"""
 import json, os, glob, hashlib
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "docs")
 PW_HASH = hashlib.sha256("gaocheng".encode()).hexdigest()
 
-WX_CN = {0:"�?,1:"少云",2:"多云",3:"�?,45:"�?,48:"雾凇",51:"小毛毛雨",53:"中毛毛雨",55:"大毛毛雨",61:"小雨",63:"中雨",65:"大雨",71:"小雪",73:"中雪",75:"大雪",80:"阵雨",81:"中阵�?,82:"大阵�?,95:"雷暴",96:"冰雹雷暴",99:"大冰雹雷�?}
+WX_CN = {0:"晴",1:"少云",2:"多云",3:"阴",45:"雾",48:"雾凇",51:"小毛毛雨",53:"中毛毛雨",55:"大毛毛雨",61:"小雨",63:"中雨",65:"大雨",71:"小雪",73:"中雪",75:"大雪",80:"阵雨",81:"中阵雨",82:"大阵雨",95:"雷暴",96:"冰雹雷暴",99:"大冰雹雷暴"}
 
 def load_latest():
     files = sorted(glob.glob(os.path.join(DATA_DIR, "*.json")), reverse=True)
