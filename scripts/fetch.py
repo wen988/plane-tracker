@@ -42,52 +42,61 @@ HEADERS = {
 tz = timezone(timedelta(hours=8))  # UTC+8
 
 
-def fetch_states() -> list[dict]:
-    """抓取石家庄及周边上空飞机状态（带 OpenSky 认证）"""
+def fetch_states() -> list:
+    """抓取石家庄及周边上空飞机状态（带 OpenSky 认证，失败回退匿名）"""
     import os
     client_id = os.environ.get("OPENSKY_CLIENT_ID", "")
     client_secret = os.environ.get("OPENSKY_CLIENT_SECRET", "")
+    
     params = {
-        "lamin": LAMIN,
-        "lomin": LOMIN,
-        "lamax": LAMAX,
-        "lomax": LOMAX,
+        "lamin": LAMIN, "lomin": LOMIN,
+        "lamax": LAMAX, "lomax": LOMAX,
     }
+    
     try:
+        # 先尝试带认证
         if client_id and client_secret:
-            auth_resp = requests.post(
-                "https://opensky-network.org/api/token",
-                json={"client_id": client_id, "client_secret": client_secret},
-                timeout=10
-            )
-            auth_resp.raise_for_status()
-            token = auth_resp.json().get("access_token", "")
-            req_headers = {**HEADERS, "Authorization": f"Bearer {token}"}
-            r = requests.get(API_URL, params=params, headers=req_headers, timeout=30)
-        else:
-            r = requests.get(API_URL, params=params, headers=HEADERS, timeout=30)
+            print(f"Attempting OAuth2 auth with client_id: {client_id[:20]}...")
+            try:
+                # 尝试 JSON body
+                auth_resp = requests.post(
+                    "https://opensky-network.org/api/token",
+                    json={"client_id": client_id, "client_secret": client_secret},
+                    timeout=10
+                )
+                if auth_resp.status_code != 200:
+                    print(f"Token JSON auth failed ({auth_resp.status_code}), trying form data...")
+                    auth_resp = requests.post(
+                        "https://opensky-network.org/api/token",
+                        data={"client_id": client_id, "client_secret": client_secret},
+                        timeout=10
+                    )
+                auth_resp.raise_for_status()
+                token = auth_resp.json().get("access_token", "")
+                if token:
+                    print(f"Got token: {token[:10]}...")
+                    r = requests.get(API_URL, params=params,
+                                     headers={"Authorization": f"Bearer {token}"}, timeout=30)
+                    r.raise_for_status()
+                    data = r.json()
+                    result = data.get("states") or data.get("states_list") or []
+                    print(f"Auth success, got {len(result)} states")
+                    return result
+            except Exception as e:
+                print(f"Auth failed: {e}, falling back to anonymous")
+        
+        # 匿名回退
+        print("Using anonymous request...")
+        r = requests.get(API_URL, params=params, timeout=30)
         r.raise_for_status()
         data = r.json()
-        states = data.get("states") or []
-        result = []
-        for s in states:
-            result.append({
-                "icao24":      s[0],
-                "callsign":    (s[1] or "").strip(),
-                "origin":      s[2] or "",
-                "longitude":   s[5],
-                "latitude":    s[6],
-                "altitude":    s[7],
-                "on_ground":   s[8],
-                "velocity":    s[9],
-                "heading":     s[10],
-                "vertical":    s[11],
-            })
+        result = data.get("states") or data.get("states_list") or []
+        print(f"Anonymous success, got {len(result)} states")
         return result
+        
     except Exception as e:
-        print(f"States fetch failed: {e}")
+        print(f"States fetch failed completely: {e}")
         return []
-
 
 def fetch_weather() -> dict:
     """抓取藁城区实时天气（Open-Meteo，免费无限调用）"""
