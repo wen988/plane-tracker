@@ -381,5 +381,402 @@
         }
       ]
     }
+  },
+  {
+    "timestamp": "2026-07-24T03:55:08.839331+08:00",
+    "count": 8,
+    "bbox": {
+      "lamin": 37.0,
+      "lamax": 40.5,
+      "lomin": 113.0,
+      "lomax": 117.5
+    },
+    "planes": [
+      {
+        "icao24": "873356",
+        "callsign": "ANA204",
+        "origin_country": "Japan",
+        "longitude": 113.8057,
+        "latitude": 39.9394,
+        "altitude": 11917.68,
+        "on_ground": false,
+        "velocity": 262.15,
+        "track": 107.12,
+        "vertical_rate": 0,
+        "geo_altitude": 12504.42,
+        "squawk": null
+      },
+      {
+        "icao24": "781caa",
+        "callsign": "CCA847",
+        "origin_country": "China",
+        "longitude": 116.7535,
+        "latitude": 40.3028,
+        "altitude": 11003.28,
+        "on_ground": false,
+        "velocity": 271.53,
+        "track": 349.52,
+        "vertical_rate": 0,
+        "geo_altitude": 11551.92,
+        "squawk": null
+      },
+      {
+        "icao24": "507ca4",
+        "callsign": "MFX623",
+        "origin_country": "Uzbekistan",
+        "longitude": 113.6318,
+        "latitude": 40.0355,
+        "altitude": 10088.88,
+        "on_ground": false,
+        "velocity": 227.42,
+        "track": 119.7,
+        "vertical_rate": -0.33,
+        "geo_altitude": 10538.46,
+        "squawk": null
+      },
+      {
+        "icao24": "7813c2",
+        "callsign": "CCA962",
+        "origin_country": "China",
+        "longitude": 115.9894,
+        "latitude": 40.4294,
+        "altitude": 4411.98,
+        "on_ground": false,
+        "velocity": 189.85,
+        "track": 90.93,
+        "vertical_rate": -8.78,
+        "geo_altitude": 4572,
+        "squawk": null
+      },
+      {
+        "icao24": "789266",
+        "callsign": "CPA395",
+        "origin_country": "China",
+        "longitude": 114.4658,
+        "latitude": 38.8048,
+        "altitude": 9784.08,
+        "on_ground": false,
+        "velocity": 216.61,
+        "track": 168.77,
+        "vertical_rate": 0.33,
+        "geo_altitude": 10279.38,
+        "squawk": null
+      },
+      {
+        "icao24": "3c670f",
+        "callsign": "DLH742",
+        "origin_country": "Germany",
+        "longitude": 115.797,
+        "latitude": 39.4035,
+        "altitude": 12527.28,
+        "on_ground": false,
+        "velocity": 257.57,
+        "track": 106.12,
+        "vertical_rate": 0,
+        "geo_altitude": 13152.12,
+        "squawk": null
+      },
+      {
+        "icao24": "48ae21",
+        "callsign": "LOT97",
+        "origin_country": "Poland",
+        "longitude": 115.1089,
+        "latitude": 39.5513,
+        "altitude": 11917.68,
+        "on_ground": false,
+        "velocity": 258.36,
+        "track": 105.48,
+        "vertical_rate": -0.33,
+        "geo_altitude": 12527.28,
+        "squawk": null
+      },
+      {
+        "icao24": "151ebe",
+        "callsign": "SBI6311",
+        "origin_country": "Russian Federation",
+        "longitude": 115.1945,
+        "latitude": 40.438,
+        "altitude": 5699.76,
+        "on_ground": false,
+        "velocity": 185.9,
+        "track": 134.22,
+        "vertical_rate": -8.13,
+        "geo_altitude": 5974.08,
+        "squawk": null
+      }
+    ],
+    "weather": {
+      "latitude": 38.76977,
+      "longitude": 115.29331,
+      "generationtime_ms": 1.2253522872924805,
+      "utc_offset_seconds": 0,
+      "timezone": "GMT",
+      "timezone_abbreviation": "GMT",
+      "elevation": 32.0,
+      "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "°C",
+        "relative_humidity_2m": "%",
+        "wind_speed_10m": "km/h",
+        "wind_direction_10m": "°",
+        "weather_code": "wmo code",
+        "visibility": "m"
+      },
+      "current": {
+        "time": "2026-07-23T19:45",
+        "interval": 900,
+        "temperature_2m": 22.5,
+        "relative_humidity_2m": 96,
+        "wind_speed_10m": 5.1,
+        "wind_direction_10m": 356,
+        "weather_code": 3,
+        "visibility": 4820.0
+      }
+    },
+    "forecast": {
+      "hourly": [
+        {
+          "time": "2026-07-24T00:00",
+          "temperature": 23.7,
+          "humidity": 90,
+          "precip_prob": 3,
+          "wind_speed": 3.8,
+          "wind_direction": 73,
+          "weather_code": 3,
+          "visibility": 5980.0
+        },
+        {
+          "time": "2026-07-24T01:00",
+          "temperature": 23.6,
+          "humidity": 91,
+          "precip_prob": 4,
+          "wind_speed": 1.6,
+          "wind_direction": 354,
+          "weather_code": 2,
+          "visibility": 5980.0
+        },
+        {
+          "time": "2026-07-24T02:00",
+          "temperature": 23.0,
+          "humidity": 94,
+          "precip_prob": 6,
+          "wind_speed": 2.9,
+          "wind_direction": 11,
+          "weather_code": 1,
+          "visibility": 4820.0
+        },
+        {
+          "time": "2026-07-24T03:00",
+          "temperature": 22.7,
+          "humidity": 95,
+          "precip_prob": 10,
+          "wind_speed": 3.2,
+          "wind_direction": 357,
+          "weather_code": 3,
+          "visibility": 4820.0
+        },
+        {
+          "time": "2026-07-24T04:00",
+          "temperature": 22.4,
+          "humidity": 96,
+          "precip_prob": 15,
+          "wind_speed": 5.6,
+          "wind_direction": 356,
+          "weather_code": 3,
+          "visibility": 4820.0
+        },
+        {
+          "time": "2026-07-24T05:00",
+          "temperature": 22.4,
+          "humidity": 95,
+          "precip_prob": 18,
+          "wind_speed": 7.4,
+          "wind_direction": 7,
+          "weather_code": 3,
+          "visibility": 4820.0
+        },
+        {
+          "time": "2026-07-24T06:00",
+          "temperature": 22.7,
+          "humidity": 93,
+          "precip_prob": 18,
+          "wind_speed": 6.2,
+          "wind_direction": 30,
+          "weather_code": 3,
+          "visibility": 4820.0
+        },
+        {
+          "time": "2026-07-24T07:00",
+          "temperature": 23.8,
+          "humidity": 90,
+          "precip_prob": 17,
+          "wind_speed": 3.3,
+          "wind_direction": 54,
+          "weather_code": 3,
+          "visibility": 5980.0
+        },
+        {
+          "time": "2026-07-24T08:00",
+          "temperature": 25.1,
+          "humidity": 85,
+          "precip_prob": 18,
+          "wind_speed": 4.1,
+          "wind_direction": 61,
+          "weather_code": 3,
+          "visibility": 7040.0
+        },
+        {
+          "time": "2026-07-24T09:00",
+          "temperature": 26.3,
+          "humidity": 78,
+          "precip_prob": 21,
+          "wind_speed": 5.2,
+          "wind_direction": 44,
+          "weather_code": 3,
+          "visibility": 6180.0
+        },
+        {
+          "time": "2026-07-24T10:00",
+          "temperature": 27.1,
+          "humidity": 73,
+          "precip_prob": 26,
+          "wind_speed": 6.3,
+          "wind_direction": 51,
+          "weather_code": 51,
+          "visibility": 6180.0
+        },
+        {
+          "time": "2026-07-24T11:00",
+          "temperature": 28.4,
+          "humidity": 68,
+          "precip_prob": 31,
+          "wind_speed": 7.6,
+          "wind_direction": 52,
+          "weather_code": 3,
+          "visibility": 9240.0
+        },
+        {
+          "time": "2026-07-24T12:00",
+          "temperature": 29.2,
+          "humidity": 64,
+          "precip_prob": 37,
+          "wind_speed": 7.0,
+          "wind_direction": 58,
+          "weather_code": 3,
+          "visibility": 9240.0
+        },
+        {
+          "time": "2026-07-24T13:00",
+          "temperature": 29.6,
+          "humidity": 63,
+          "precip_prob": 44,
+          "wind_speed": 6.4,
+          "wind_direction": 45,
+          "weather_code": 2,
+          "visibility": 9240.0
+        },
+        {
+          "time": "2026-07-24T14:00",
+          "temperature": 30.1,
+          "humidity": 62,
+          "precip_prob": 49,
+          "wind_speed": 5.9,
+          "wind_direction": 23,
+          "weather_code": 1,
+          "visibility": 8100.0
+        },
+        {
+          "time": "2026-07-24T15:00",
+          "temperature": 30.4,
+          "humidity": 61,
+          "precip_prob": 50,
+          "wind_speed": 5.2,
+          "wind_direction": 6,
+          "weather_code": 1,
+          "visibility": 7120.0
+        },
+        {
+          "time": "2026-07-24T16:00",
+          "temperature": 30.4,
+          "humidity": 61,
+          "precip_prob": 48,
+          "wind_speed": 5.3,
+          "wind_direction": 352,
+          "weather_code": 0,
+          "visibility": 8660.0
+        },
+        {
+          "time": "2026-07-24T17:00",
+          "temperature": 30.2,
+          "humidity": 62,
+          "precip_prob": 47,
+          "wind_speed": 5.8,
+          "wind_direction": 7,
+          "weather_code": 0,
+          "visibility": 8100.0
+        },
+        {
+          "time": "2026-07-24T18:00",
+          "temperature": 29.7,
+          "humidity": 64,
+          "precip_prob": 47,
+          "wind_speed": 5.1,
+          "wind_direction": 45,
+          "weather_code": 0,
+          "visibility": 9080.0
+        },
+        {
+          "time": "2026-07-24T19:00",
+          "temperature": 28.6,
+          "humidity": 73,
+          "precip_prob": 47,
+          "wind_speed": 4.2,
+          "wind_direction": 95,
+          "weather_code": 1,
+          "visibility": 9240.0
+        },
+        {
+          "time": "2026-07-24T20:00",
+          "temperature": 27.3,
+          "humidity": 79,
+          "precip_prob": 45,
+          "wind_speed": 3.9,
+          "wind_direction": 74,
+          "weather_code": 0,
+          "visibility": 7080.0
+        },
+        {
+          "time": "2026-07-24T21:00",
+          "temperature": 26.4,
+          "humidity": 84,
+          "precip_prob": 38,
+          "wind_speed": 5.4,
+          "wind_direction": 127,
+          "weather_code": 0,
+          "visibility": 7020.0
+        },
+        {
+          "time": "2026-07-24T22:00",
+          "temperature": 25.8,
+          "humidity": 88,
+          "precip_prob": 27,
+          "wind_speed": 1.1,
+          "wind_direction": 180,
+          "weather_code": 0,
+          "visibility": 6900.0
+        },
+        {
+          "time": "2026-07-24T23:00",
+          "temperature": 25.2,
+          "humidity": 89,
+          "precip_prob": 20,
+          "wind_speed": 2.8,
+          "wind_direction": 117,
+          "weather_code": 1,
+          "visibility": 4760.0
+        }
+      ]
+    }
   }
 ]
