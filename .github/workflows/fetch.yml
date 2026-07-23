@@ -37,6 +37,9 @@ jobs:
 
 
       - name: Fetch plane data
+        env:
+          OPENSKY_CLIENT_ID: ${{ secrets.OPENSKY_CLIENT_ID }}
+          OPENSKY_CLIENT_SECRET: ${{ secrets.OPENSKY_CLIENT_SECRET }}
         run: python scripts/fetch.py
 
 
