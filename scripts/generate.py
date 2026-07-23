@@ -177,7 +177,7 @@ tr:hover td{{background:#f5f5f7}}
 <div style="font-size:15px;color:#86868b;margin-bottom:16px">藁城上空飞机追踪</div>
 <input type="password" id="pw" placeholder="输入密码" onkeydown="if(event.key==='Enter')unlock()">
 <button onclick="unlock()">解锁</button><div class="err" id="err">密码错误</div></div>
-<nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘</a></nav>
+<nav><a class="on" href="index.html">飞机追踪</a><a href="weather.html">气象仪表盘</a><a href="3d.html">3D地球</a><a href="replay.html">历史回放</a><a href="space.html">太空过境</a></nav>
 <div class="container">
 <div class="header"><h1>藁城上空飞机追踪</h1><div class="ts">更新于 {fmt_time(ts)}</div></div>
 <div class="stats"><div class="card"><div class="num">{total}</div><div class="lbl">追踪飞机</div></div>
@@ -269,7 +269,7 @@ th{{text-align:left;padding:8px 12px;color:#86868b;font-weight:500;border-bottom
 td{{padding:8px 12px;border-bottom:1px solid #f5f5f7}}
 tr:hover td{{background:#f5f5f7}}
 </style></head><body>
-<nav><a href="index.html">飞机追踪</a><a class="on" href="weather.html">气象仪表盘</a></nav>
+<nav><a href="index.html">飞机追踪</a><a class="on" href="weather.html">气象仪表盘</a><a href="3d.html">3D地球</a><a href="replay.html">历史回放</a><a href="space.html">太空过境</a></nav>
 <div class="container">
 <div class="header"><h1>藁城气象仪表盘</h1><div class="ts">更新于 {fmt_time(ts)}</div></div>
 <div class="stats">
