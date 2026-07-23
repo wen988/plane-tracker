@@ -39,6 +39,30 @@ HEADERS = {
     "User-Agent": "PlaneTracker/1.0 (GitHub Actions; personal project)"
 }
 
+def _retry_get(url, **kwargs):
+    for i in range(3):
+        try:
+            return requests.get(url, timeout=60, **kwargs)
+        except requests.exceptions.Timeout:
+            print(f"GET timeout attempt {i+1}/3, retrying...")
+            time.sleep(10)
+        except requests.exceptions.ConnectionError as e:
+            print(f"GET connection error attempt {i+1}/3: {e}, retrying...")
+            time.sleep(10)
+    raise Exception("All 3 GET attempts failed")
+
+def _retry_post(url, **kwargs):
+    for i in range(3):
+        try:
+            return requests.post(url, timeout=60, **kwargs)
+        except requests.exceptions.Timeout:
+            print(f"POST timeout attempt {i+1}/3, retrying...")
+            time.sleep(10)
+        except requests.exceptions.ConnectionError as e:
+            print(f"POST connection error attempt {i+1}/3: {e}, retrying...")
+            time.sleep(10)
+    raise Exception("All 3 POST attempts failed")
+
 tz = timezone(timedelta(hours=8))  # UTC+8
 
 
@@ -59,14 +83,14 @@ def fetch_states() -> list:
             print(f"Attempting OAuth2 auth with client_id: {client_id[:20]}...")
             try:
                 # 尝试 JSON body
-                auth_resp = requests.post(
+                auth_resp = _retry_post(
                     "https://opensky-network.org/api/token",
                     json={"client_id": client_id, "client_secret": client_secret},
                     timeout=10
                 )
                 if auth_resp.status_code != 200:
                     print(f"Token JSON auth failed ({auth_resp.status_code}), trying form data...")
-                    auth_resp = requests.post(
+                    auth_resp = _retry_post(
                         "https://opensky-network.org/api/token",
                         data={"client_id": client_id, "client_secret": client_secret},
                         timeout=10
@@ -75,7 +99,7 @@ def fetch_states() -> list:
                 token = auth_resp.json().get("access_token", "")
                 if token:
                     print(f"Got token: {token[:10]}...")
-                    r = requests.get(API_URL, params=params,
+                    r = _retry_get(API_URL, params=params,
                                      headers={"Authorization": f"Bearer {token}"}, timeout=30)
                     r.raise_for_status()
                     data = r.json()
@@ -87,7 +111,7 @@ def fetch_states() -> list:
         
         # 匿名回退
         print("Using anonymous request...")
-        r = requests.get(API_URL, params=params, timeout=30)
+        r = _retry_get(API_URL, params=params, timeout=30)
         r.raise_for_status()
         data = r.json()
         result = data.get("states") or data.get("states_list") or []
