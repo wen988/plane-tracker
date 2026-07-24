@@ -938,7 +938,9 @@ function downloadFile(type) {
   const key = type === 'video' ? 'videoUrl' : 'musicUrl';
   const url = previewEl.dataset[key];
   if (url) {
-    window.open(url, '_blank');
+    // 通过 Worker 代理下载，由 Worker 添加 Content-Disposition: attachment 头触发浏览器下载
+    const downloadUrl = API_BASE + '?download=1&url=' + encodeURIComponent(url);
+    window.open(downloadUrl, '_blank');
   } else {
     alert('下载地址暂不可用');
   }
