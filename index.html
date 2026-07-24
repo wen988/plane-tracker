@@ -1,4 +1,4 @@
-<![CDATA[<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -295,11 +295,20 @@ body.error .state-success { display: none !important; }
 .result-hero-label {
   font-size: 14px; font-weight: 400; color: rgba(255,255,255,0.6);
   margin-bottom: 6px;
+  animation: resultFade 0.35s ease-out both;
 }
 .result-hero-status {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 20px; font-weight: 600; letter-spacing: -0.01em;
   color: var(--success);
+}
+.result-hero-status svg {
+  animation: checkPop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.08s;
+}
+.result-hero-status span {
+  animation: resultFade 0.4s ease-out both;
+  animation-delay: 0.2s;
 }
 #resultSection {
   width: 100%; padding: 0 22px 40px;
@@ -308,13 +317,23 @@ body.error .state-success { display: none !important; }
 }
 .result-inner {
   max-width: 768px; margin: 0 auto;
-  animation: fadeInUp 0.5s ease-out both;
+  animation: resultScaleIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.result-inner .result-card {
+  animation: none;
 }
 .result-card {
   border-radius: 1.6rem; overflow: hidden;
   background: var(--card); border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
 }
+.result-card > * {
+  animation: resultSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.result-card > :nth-child(1) { animation-delay: 0.1s; }
+.result-card > :nth-child(2) { animation-delay: 0.18s; }
+.result-card > :nth-child(3) { animation-delay: 0.24s; }
+.result-card > :nth-child(4) { animation-delay: 0.3s; }
 .video-preview {
   position: relative; width: 100%; aspect-ratio: 16/9;
   background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
@@ -591,6 +610,28 @@ body.error .state-success { display: none !important; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Apple-style spring animations for result card */
+@keyframes resultScaleIn {
+  0%   { opacity: 0; transform: translateY(40px) scale(0.92); }
+  60%  { opacity: 1; transform: translateY(-4px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes resultSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes checkPop {
+  0%   { opacity: 0; transform: scale(0); }
+  40%  { opacity: 1; transform: scale(0); }
+  65%  { opacity: 1; transform: scale(1.18); }
+  85%  { opacity: 1; transform: scale(0.94); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes resultFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 832px) {
   .features-grid { grid-template-columns: repeat(2, 1fr); }
@@ -820,7 +861,7 @@ body.error .state-success { display: none !important; }
           <span>支持哪些平台？</span>
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </summary>
-        <div class="faq-answer">支持抖音、快手、B站、小红书、微博等主流短视频平台。</div>
+        <div class="faq-answer">支持抖音、快手、B站，小红书、微博即将支持。</div>
       </details>
       <details class="faq-item">
         <summary class="faq-summary">
@@ -987,5 +1028,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 </body>
-</html>]]>
-
+</html>
