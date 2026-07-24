@@ -662,7 +662,7 @@ body.error .state-success { display: none !important; }
       <div class="video-preview">
         <img id="coverImage" src="" alt="视频封面" style="display:none;">
         <div id="coverPreview" style="display:none;"></div>
-        <div class="video-play-overlay" id="videoPlayer" onclick="this.closest('.video-preview').querySelector('#coverImage').style.display='none';var v=this.closest('.video-preview').querySelector('video');if(!v){v=document.createElement('video');v.controls=true;v.autoplay=true;v.style.cssText='position:absolute;inset:0;width:100%;height:100%;';v.src=this.closest('.video-preview').dataset.videoUrl;this.closest('.video-preview').appendChild(v);}else{v.play();}this.style.display='none';">
+        <div class="video-play-overlay" id="videoPlayer" onclick="this.closest('.video-preview').querySelector('#coverImage').style.display='none';var v=this.closest('.video-preview').querySelector('video');if(!v){v=document.createElement('video');v.controls=true;v.autoplay=true;v.style.cssText='position:absolute;inset:0;width:100%;height:100%;';v.crossOrigin='anonymous';v.src=API_BASE+'?download=1&url='+encodeURIComponent(this.closest('.video-preview').dataset.videoUrl);this.closest('.video-preview').appendChild(v);}else{v.play();}this.style.display='none';">
           <div class="play-btn">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
           </div>
