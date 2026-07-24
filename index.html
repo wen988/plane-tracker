@@ -292,6 +292,10 @@ body.error .state-success { display: none !important; }
   background: linear-gradient(180deg, var(--bg-900) 0%, var(--bg-800) 100%);
   color: var(--text-50); text-align: center;
 }
+.result-hero.green-bg {
+  animation: bgToGreen 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 .result-hero-label {
   font-size: 14px; font-weight: 400; color: rgba(255,255,255,0.6);
   margin-bottom: 6px;
@@ -581,6 +585,16 @@ body.error .state-success { display: none !important; }
   letter-spacing: -0.016em; color: var(--text-500);
 }
 
+/* ===== DISCLAIMER ===== */
+.disclaimer {
+  width: 100%; padding: 24px 22px 32px;
+  text-align: center;
+  color: var(--text-400);
+  font-size: 0.75rem;
+  background: var(--bg-100);
+  line-height: 1.6;
+}
+
 /* ===== FOOTER ===== */
 .footer {
   padding: 18px 22px 22px;
@@ -631,6 +645,11 @@ body.error .state-success { display: none !important; }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+@keyframes bgToGreen {
+  from { background: linear-gradient(180deg, var(--bg-900) 0%, var(--bg-800) 100%); }
+  to   { background: linear-gradient(180deg, #1a7a2e 0%, #0d5c1a 100%); }
+}
+
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 832px) {
@@ -911,6 +930,8 @@ function resetState() {
   setState('default');
   document.getElementById('urlInput').value = '';
   document.getElementById('urlInput').focus();
+  var rh = document.querySelector('.result-hero');
+  if (rh) rh.classList.remove('green-bg');
 }
 
 // ========== PARSE LOGIC ==========
@@ -1008,6 +1029,7 @@ function downloadFile(type) {
 function showError(msg) {
   setState('error');
   document.getElementById('errorText').textContent = msg;
+    document.querySelector('.result-hero').classList.add('green-bg');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1026,6 +1048,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+
+
+<!-- ===== DISCLAIMER ===== -->
+<div class="disclaimer always-visible">
+  免责声明：本工具仅供个人学习和技术研究使用，严禁用于任何商业或非法用途。用户应自行遵守相关平台服务条款及法律法规，因不当使用造成的任何后果由用户自行承担。
+</div>
+
 
 </body>
 </html>
