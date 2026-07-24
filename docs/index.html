@@ -987,35 +987,17 @@ function downloadFile(type) {
   btn.innerHTML = '<span class="btn-spinner"></span>下载中...';
 
   var downloadUrl = API_BASE + '?download=1&url=' + encodeURIComponent(url);
-  fetch(downloadUrl)
-    .then(function(resp) {
-      if (!resp.ok) throw new Error('下载失败');
-      return resp.blob();
-    })
-    .then(function(blob) {
-      var blobUrl = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = (type === 'video' ? 'video' : 'audio') + '.mp4';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
 
-      // 下载完成反馈
-      btn.classList.add('download-done');
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>下载完成';
-      setTimeout(function() {
-        btn.classList.remove('download-done');
-        btn.disabled = false;
-        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>' + originalText;
-      }, 2000);
-    })
-    .catch(function() {
-      btn.disabled = false;
-      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>' + originalText;
-      window.open(url, '_blank');
-    });
+  // 打开下载链接，Worker 返回 Content-Disposition: attachment，浏览器自动下载
+  window.open(downloadUrl, '_blank');
+
+  btn.classList.add('download-done');
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>下载已开始';
+  setTimeout(function() {
+    btn.classList.remove('download-done');
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>' + originalText;
+  }, 3000);
 }
 
 // ========== ERROR DISPLAY ==========
