@@ -216,11 +216,11 @@ body.error .state-success { display: none !important; }
 
 /* ===== LOADING STATE ===== */
 .loading-spinner-inline {
-  margin-top: 56px;
+  margin-top: 32px;
   display: flex; flex-direction: column; align-items: center;
 }
 .spinner-wrapper {
-  position: relative; width: 56px; height: 56px;
+  position: relative; width: 40px; height: 40px;
 }
 .spinner-ring-bg {
   position: absolute; inset: 0;
@@ -233,33 +233,17 @@ body.error .state-success { display: none !important; }
   animation: spin 0.8s cubic-bezier(0.32, 0.72, 0, 1) infinite;
 }
 .spinner-pulse {
-  position: absolute; inset: -8px; border-radius: 50%;
+  position: absolute; inset: -6px; border-radius: 50%;
   background: radial-gradient(circle, rgba(0,122,255,0.18) 0%, transparent 70%);
   animation: pulse-ring 2s ease-in-out infinite;
 }
 .loading-text {
-  margin-top: 20px; font-size: 17px; line-height: 1.47;
+  margin-top: 14px; font-size: 15px; line-height: 1.47;
   letter-spacing: -0.022em; color: var(--text-400);
 }
 .loading-sub {
-  margin-top: 6px; font-size: 13px; line-height: 1.43;
+  margin-top: 4px; font-size: 12px; line-height: 1.43;
   letter-spacing: -0.016em; color: rgba(255,255,255,0.42);
-}
-.loading-input-area {
-  width: 100%; padding: 0 22px 80px; background: var(--bg-900);
-  display: flex; justify-content: center;
-}
-.loading-input-inner {
-  width: 100%; max-width: 680px; display: flex; gap: 12px; align-items: stretch;
-}
-.loading-input-fake {
-  flex: 1; min-width: 0; height: 48px; padding: 0 16px;
-  border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.06);
-  color: var(--text-400); font-size: 15px; line-height: 1.47;
-  letter-spacing: -0.022em; outline: none; opacity: 0.5;
-  display: flex; align-items: center;
 }
 .btn-spinner {
   display: inline-block; width: 16px; height: 16px;
@@ -626,43 +610,27 @@ body.error .state-success { display: none !important; }
         <input type="text" id="urlInput" placeholder="粘贴抖音/快手/B站等视频链接..." aria-label="视频链接输入">
         <button id="parseBtn" onclick="doParse()">解析</button>
       </div>
-      <div class="platform-tags">
+      <div class="platform-tags" id="platformTags">
         <span class="platform-tag"><span class="dot"></span>抖音</span>
         <span class="platform-tag"><span class="dot"></span>快手</span>
         <span class="platform-tag"><span class="dot"></span>B站</span>
         <span class="platform-tag"><span class="dot"></span>小红书</span>
         <span class="platform-tag"><span class="dot"></span>微博</span>
       </div>
+      <div class="loading-spinner-inline" id="loadingSpinner" style="display:none;">
+        <div class="spinner-wrapper">
+          <div class="spinner-ring-bg"></div>
+          <div class="spinner-ring"></div>
+          <div class="spinner-pulse"></div>
+        </div>
+        <p class="loading-text">正在解析视频...</p>
+        <p class="loading-sub">请稍候，通常只需几秒钟</p>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ===== LOADING STATE ===== -->
-<section class="state-loading hero" style="padding-bottom:72px;">
-  <div class="hero-bg-img"></div>
-  <div class="hero-overlay"></div>
-  <div class="hero-content">
-    <h1 class="hero-title" style="font-size:clamp(36px,4.5vw,64px);">短视频解析</h1>
-    <p class="hero-subtitle" style="font-size:clamp(17px,2vw,21px);margin-top:8px;">无水印下载工具</p>
-    <div class="loading-spinner-inline">
-      <div class="spinner-wrapper">
-        <div class="spinner-ring-bg"></div>
-        <div class="spinner-ring"></div>
-        <div class="spinner-pulse"></div>
-      </div>
-      <p class="loading-text">正在解析视频...</p>
-      <p class="loading-sub">请稍候，通常只需几秒钟</p>
-    </div>
-  </div>
-</section>
-<div class="state-loading loading-input-area" style="background:var(--bg-900);padding-top:0;">
-  <div class="loading-input-inner">
-    <div class="loading-input-fake" id="statusBox"></div>
-    <button disabled style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 24px;border-radius:980px;border:none;background:var(--brand-500);color:var(--bg-50);font-size:15px;font-weight:600;white-space:nowrap;opacity:0.6;cursor:not-allowed;flex-shrink:0;">
-      <span class="btn-spinner"></span>解析中
-    </button>
-  </div>
-</div>
+
 
 <!-- ===== SUCCESS STATE (result) ===== -->
 <section class="state-success result-hero">
@@ -853,36 +821,83 @@ function resetState() {
   setState('default');
   document.getElementById('urlInput').value = '';
   document.getElementById('urlInput').focus();
+  document.getElementById('loadingSpinner').style.display = 'none';
+  document.getElementById('platformTags').style.display = '';
+}
+
+let currentAbortController = null;
+
+function enterLoading() {
+  // Keep default layout, just disable input and show spinner
+  var input = document.getElementById('urlInput');
+  var btn = document.getElementById('parseBtn');
+  input.disabled = true;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span>解析中';
+  document.getElementById('platformTags').style.display = 'none';
+  document.getElementById('loadingSpinner').style.display = '';
+}
+
+function exitLoading() {
+  var input = document.getElementById('urlInput');
+  var btn = document.getElementById('parseBtn');
+  input.disabled = false;
+  btn.disabled = false;
+  btn.innerHTML = '解析';
+  document.getElementById('platformTags').style.display = '';
+  document.getElementById('loadingSpinner').style.display = 'none';
+  if (currentAbortController) {
+    currentAbortController = null;
+  }
 }
 
 // ========== PARSE LOGIC ==========
-// Modify this URL to point to your Cloudflare Worker endpoint
 const API_BASE = 'https://api.919667.xyz/parse';
 
 async function doParse() {
-  const url = document.getElementById('urlInput').value.trim();
+  var url = document.getElementById('urlInput').value.trim();
   if (!url) return;
 
-  setState('loading');
-  document.getElementById('statusBox').textContent = url.length > 40 ? url.substring(0, 40) + '...' : url;
+  enterLoading();
+
+  // AbortController with 15s timeout
+  if (currentAbortController) currentAbortController.abort();
+  currentAbortController = new AbortController();
+  var timeoutId = setTimeout(function() { currentAbortController.abort(); }, 15000);
 
   try {
-    const resp = await fetch(API_BASE + '?url=' + encodeURIComponent(url));
-    const data = await resp.json();
+    var resp = await fetch(API_BASE + '?url=' + encodeURIComponent(url), {
+      signal: currentAbortController.signal
+    });
+    clearTimeout(timeoutId);
 
-    if (!data.success) {
-      showError(data.error || '解析失败，请检查链接');
+    if (!resp.ok) {
+      var errText = '';
+      try { var errData = await resp.json(); errText = errData.error || ''; } catch(e) {}
+      showError(errText || '服务器返回错误 (' + resp.status + ')，请稍后重试');
+      return;
+    }
+
+    var data = await resp.json();
+
+    if (!data.success && data.error) {
+      showError(data.error);
       return;
     }
 
     showResult(data);
   } catch (e) {
-    showError('网络请求失败：' + e.message);
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') {
+      showError('请求超时，请检查网络后重试');
+    } else {
+      showError('网络请求失败：' + e.message);
+    }
   }
 }
 
 async function doParseContinue() {
-  const url = document.getElementById('continueInput').value.trim();
+  var url = document.getElementById('continueInput').value.trim();
   if (!url) return;
   document.getElementById('urlInput').value = url;
   await doParse();
@@ -890,6 +905,7 @@ async function doParseContinue() {
 
 // ========== RESULT DISPLAY ==========
 function showResult(data) {
+  exitLoading();
   setState('success');
 
   document.getElementById('videoTitle').textContent = data.title || '视频标题';
@@ -898,7 +914,7 @@ function showResult(data) {
     document.getElementById('authorName').textContent = data.author;
   }
   if (data.avatar) {
-    const avatar = document.getElementById('authorAvatar');
+    var avatar = document.getElementById('authorAvatar');
     avatar.src = data.avatar;
     avatar.style.display = 'block';
   } else {
@@ -908,25 +924,21 @@ function showResult(data) {
     document.getElementById('platformLabel').textContent = data.platform;
   }
 
-  // Cover image
   if (data.cover) {
-    const cover = document.getElementById('coverImage');
+    var cover = document.getElementById('coverImage');
     cover.src = data.cover;
     cover.style.display = 'block';
   }
 
-  // Duration
   if (data.duration) {
     document.getElementById('videoDuration').textContent = data.duration;
     document.getElementById('videoDuration').style.display = 'block';
   }
 
-  // Download URLs (store on elements)
-  const previewEl = document.querySelector('.video-preview');
+  var previewEl = document.querySelector('.video-preview');
   if (data.videoUrl) previewEl.dataset.videoUrl = data.videoUrl;
   if (data.musicUrl) previewEl.dataset.musicUrl = data.musicUrl;
 
-  // File info
   if (data.size) document.getElementById('fileSize').textContent = data.size;
   if (data.resolution) document.getElementById('fileResolution').textContent = data.resolution;
 
@@ -934,9 +946,9 @@ function showResult(data) {
 }
 
 function downloadFile(type) {
-  const previewEl = document.querySelector('.video-preview');
-  const key = type === 'video' ? 'videoUrl' : 'musicUrl';
-  const url = previewEl.dataset[key];
+  var previewEl = document.querySelector('.video-preview');
+  var key = type === 'video' ? 'videoUrl' : 'musicUrl';
+  var url = previewEl.dataset[key];
   if (url) {
     window.open(url, '_blank');
   } else {
@@ -946,18 +958,17 @@ function downloadFile(type) {
 
 // ========== ERROR DISPLAY ==========
 function showError(msg) {
+  exitLoading();
   setState('error');
   document.getElementById('errorText').textContent = msg;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ========== INIT ==========
-// Enter key triggers parse
 document.getElementById('urlInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') doParse();
 });
 document.addEventListener('DOMContentLoaded', function() {
-  // Listen for continue input enter key
   var ci = document.getElementById('continueInput');
   if (ci) {
     ci.addEventListener('keydown', function(e) {
