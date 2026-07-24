@@ -72,16 +72,24 @@ img { display: block; max-width: 100%; }
 
 /* ===== STATE MANAGEMENT ===== */
 .state-default, .state-loading, .state-success, .state-error { display: none; }
-body.default .state-default { display: block; }
-body.loading .state-loading { display: block; }
-body.success .state-success { display: block; }
-body.error .state-error { display: block; }
-
-/* Allow multiple state blocks on same page */
 body.default .state-default { display: revert; }
 body.loading .state-loading { display: revert; }
 body.success .state-success { display: revert; }
 body.error .state-error { display: revert; }
+
+/* Force hide non-active state sections */
+body.default .state-loading,
+body.default .state-success,
+body.default .state-error,
+body.loading .state-default,
+body.loading .state-success,
+body.loading .state-error,
+body.success .state-default,
+body.success .state-loading,
+body.success .state-error,
+body.error .state-default,
+body.error .state-loading,
+body.error .state-success { display: none !important; }
 
 /* Sections that are always visible */
 .always-visible { display: revert !important; }
@@ -123,9 +131,10 @@ body.error .state-error { display: revert; }
 }
 .hero-bg-img {
   position: absolute; inset: 0;
-  background-image: url('video-parser-tool/assets/hero-background.jpg');
-  background-size: cover; background-position: center;
-  background-repeat: no-repeat; z-index: 0; opacity: 0.35;
+  background: linear-gradient(135deg, rgba(0,122,255,0.12) 0%, transparent 40%, transparent 60%, rgba(0,122,255,0.08) 100%),
+              radial-gradient(ellipse at 20% 50%, rgba(0,122,255,0.15) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(52,199,89,0.1) 0%, transparent 50%);
+  z-index: 0;
 }
 .hero-overlay {
   position: absolute; inset: 0;
@@ -756,22 +765,22 @@ body.error .state-error { display: revert; }
     <h2 class="features-title">为什么选择 VParser</h2>
     <div class="features-grid">
       <article class="feature-card">
-        <div class="feature-icon"><img src="video-parser-tool/assets/icon-download.jpg" alt=""></div>
+        <div class="feature-icon"><svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#E8F2FF"/><path d="M22 26c0-1.1.9-2 2-2h8c1.1 0 2 .9 2 2v10c0 1.1-.9 2-2 2h-8c-1.1 0-2-.9-2-2V26Z" fill="#007AFF"/><circle cx="30" cy="22" r="6" fill="#007AFF"/><path d="M17 38c0-2.8 2.2-5 5-5h12c2.8 0 5 2.2 5 5v0H17v0Z" fill="#007AFF"/></svg></div>
         <h3>无需登录</h3>
         <p>打开即用，无需注册账号，保护您的隐私</p>
       </article>
       <article class="feature-card">
-        <div class="feature-icon"><img src="video-parser-tool/assets/icon-speed.jpg" alt=""></div>
+        <div class="feature-icon"><svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#E8F2FF"/><path d="M28 16l-2.5 2.5 7.8 7.8H16v3.4h17.3l-7.8 7.8L28 40l12-12L28 16Z" fill="#007AFF"/></svg></div>
         <h3>极速解析</h3>
         <p>先进解析引擎，秒级获取视频下载地址</p>
       </article>
       <article class="feature-card">
-        <div class="feature-icon"><img src="video-parser-tool/assets/icon-hd.jpg" alt=""></div>
+        <div class="feature-icon"><svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#E8F2FF"/><path d="M28 16C20.3 16 14 19.4 14 24c0 5.5 6.3 10.4 14 10.4S42 29.5 42 24c0-4.6-6.3-8-14-8Z" fill="#007AFF"/><path d="M14 24v8c0 4.6 6.3 8 14 8s14-3.4 14-8v-8" stroke="#007AFF" stroke-width="2.5" fill="none"/><path d="M14 28v8c0 4.6 6.3 8 14 8s14-3.4 14-8v-8" stroke="#007AFF" stroke-width="2.5" fill="none" opacity="0.5"/></svg></div>
         <h3>高清下载</h3>
         <p>支持最高画质，原画质无压缩下载</p>
       </article>
       <article class="feature-card">
-        <div class="feature-icon"><img src="video-parser-tool/assets/icon-platform.jpg" alt=""></div>
+        <div class="feature-icon"><svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#E8F2FF"/><path d="M16 20h24v16H16V20Z" fill="#007AFF"/><rect x="20" y="24" width="16" height="8" rx="1" fill="#fff"/><circle cx="28" cy="17" r="2" fill="#007AFF"/><circle cx="28" cy="39" r="2" fill="#007AFF"/></svg></div>
         <h3>多平台支持</h3>
         <p>覆盖抖音、快手、B站等主流短视频平台</p>
       </article>
