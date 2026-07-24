@@ -356,10 +356,17 @@ body.error .state-success { display: none !important; }
   background: var(--brand-500); color: var(--primary-foreground);
 }
 #downloadVideo:hover { transform: scale(1.02); box-shadow: var(--shadow-md); }
+#downloadVideo:disabled { opacity: 0.7; cursor: wait; transform: none; box-shadow: none; }
 #downloadMusic {
   background: var(--bg-200); color: var(--text-800); font-weight: 500;
 }
 #downloadMusic:hover { transform: scale(1.02); }
+#downloadMusic:disabled { opacity: 0.7; cursor: wait; transform: none; }
+.download-done {
+  background: var(--success) !important;
+  color: #fff !important;
+  transition: background-color 0.3s ease;
+}
 .file-info {
   display: flex; align-items: center; gap: 12px;
   font-size: 13px; color: var(--text-400);
@@ -959,10 +966,18 @@ function downloadFile(type) {
   var previewEl = document.querySelector('.video-preview');
   var key = type === 'video' ? 'videoUrl' : 'musicUrl';
   var url = previewEl.dataset[key];
+  var btn = type === 'video' ? document.getElementById('downloadVideo') : document.getElementById('downloadMusic');
+  var originalText = type === 'video' ? '下载视频' : '下载音频';
+
   if (!url) {
     alert('下载地址暂不可用');
     return;
   }
+
+  // 进入下载中状态
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span>下载中...';
+
   var downloadUrl = API_BASE + '?download=1&url=' + encodeURIComponent(url);
   fetch(downloadUrl)
     .then(function(resp) {
@@ -978,8 +993,19 @@ function downloadFile(type) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
+
+      // 下载完成反馈
+      btn.classList.add('download-done');
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>下载完成';
+      setTimeout(function() {
+        btn.classList.remove('download-done');
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>' + originalText;
+      }, 2000);
     })
     .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>' + originalText;
       window.open(url, '_blank');
     });
 }
