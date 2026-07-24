@@ -854,8 +854,13 @@ function exitLoading() {
 // ========== PARSE LOGIC ==========
 const API_BASE = 'https://api.919667.xyz/parse';
 
+function extractUrl(text) {
+  var match = text.match(/https?:\/\/\S+/);
+  return match ? match[0] : text.trim();
+}
+
 async function doParse() {
-  var url = document.getElementById('urlInput').value.trim();
+  var url = extractUrl(document.getElementById('urlInput').value);
   if (!url) return;
 
   enterLoading();
@@ -897,7 +902,7 @@ async function doParse() {
 }
 
 async function doParseContinue() {
-  var url = document.getElementById('continueInput').value.trim();
+  var url = extractUrl(document.getElementById('continueInput').value);
   if (!url) return;
   document.getElementById('urlInput').value = url;
   await doParse();
