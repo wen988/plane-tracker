@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<![CDATA[<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -212,6 +212,23 @@ body.error .state-success { display: none !important; }
 .platform-tag .dot {
   width: 6px; height: 6px; border-radius: 999px;
   background: var(--text-400); flex-shrink: 0;
+}
+
+.platform-tag.coming-soon {
+  background: #f0f0f0;
+  color: #999;
+  border: 1px dashed #ccc;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+.platform-tag.coming-soon .badge {
+  font-size: 10px;
+  background: #ddd;
+  color: #888;
+  padding: 0 5px;
+  border-radius: 6px;
+  margin-left: 4px;
 }
 
 /* ===== LOADING STATE ===== */
@@ -630,8 +647,8 @@ body.error .state-success { display: none !important; }
         <span class="platform-tag"><span class="dot"></span>抖音</span>
         <span class="platform-tag"><span class="dot"></span>快手</span>
         <span class="platform-tag"><span class="dot"></span>B站</span>
-        <span class="platform-tag"><span class="dot"></span>小红书</span>
-        <span class="platform-tag"><span class="dot"></span>微博</span>
+        <span class="platform-tag coming-soon">小红书<span class="badge">待支持</span></span>
+        <span class="platform-tag coming-soon">微博<span class="badge">待支持</span></span>
       </div>
     </div>
   </div>
@@ -782,7 +799,7 @@ body.error .state-success { display: none !important; }
       <article class="feature-card">
         <div class="feature-icon"><svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#E8F2FF"/><path d="M16 20h24v16H16V20Z" fill="#007AFF"/><rect x="20" y="24" width="16" height="8" rx="1" fill="#fff"/><circle cx="28" cy="17" r="2" fill="#007AFF"/><circle cx="28" cy="39" r="2" fill="#007AFF"/></svg></div>
         <h3>多平台支持</h3>
-        <p>覆盖抖音、快手、B站等主流短视频平台</p>
+        <p>覆盖抖音、快手、B站，小红书、微博即将支持</p>
       </article>
     </div>
   </div>
@@ -970,4 +987,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 </body>
-</html>
+</html>]]>
