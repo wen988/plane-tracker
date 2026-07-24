@@ -807,6 +807,11 @@ body.error .state-success { display: none !important; }
       <a href="#">隐私政策</a>
     </div>
   </div>
+  <div class="footer-inner" style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.06);">
+    <p style="font-size:11px; color:var(--text-500); line-height:1.6; max-width:720px; margin:0 auto; text-align:center;">
+      免责声明：本工具仅供个人学习研究使用，请勿用于商业用途。解析结果来自第三方平台，本站不对内容合法性负责。请在下载后24小时内删除。
+    </p>
+  </div>
 </footer>
 
 <!-- ===== JAVASCRIPT ===== -->
@@ -954,11 +959,29 @@ function downloadFile(type) {
   var previewEl = document.querySelector('.video-preview');
   var key = type === 'video' ? 'videoUrl' : 'musicUrl';
   var url = previewEl.dataset[key];
-  if (url) {
-    window.open(url, '_blank');
-  } else {
+  if (!url) {
     alert('下载地址暂不可用');
+    return;
   }
+  var downloadUrl = API_BASE + '?download=1&url=' + encodeURIComponent(url);
+  fetch(downloadUrl)
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('下载失败');
+      return resp.blob();
+    })
+    .then(function(blob) {
+      var blobUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = (type === 'video' ? 'video' : 'audio') + '.mp4';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    })
+    .catch(function() {
+      window.open(url, '_blank');
+    });
 }
 
 // ========== ERROR DISPLAY ==========
