@@ -213,6 +213,14 @@ body.error .state-success { display: none !important; }
   width: 6px; height: 6px; border-radius: 999px;
   background: var(--text-400); flex-shrink: 0;
 }
+.platform-tag.coming-soon { color: var(--text-400); }
+.platform-tag.coming-soon .dot { background: var(--text-300); opacity: 0.5; }
+.platform-tag .coming-badge {
+  font-size: 10px; padding: 0 6px; border-radius: 4px;
+  background: var(--bg-300); color: var(--text-400);
+  margin-left: 2px;
+  line-height: 1.6;
+}
 
 /* ===== LOADING STATE ===== */
 .loading-spinner-inline {
@@ -621,6 +629,8 @@ body.error .state-success { display: none !important; }
         <span class="platform-tag"><span class="dot"></span>抖音</span>
         <span class="platform-tag"><span class="dot"></span>快手</span>
         <span class="platform-tag"><span class="dot"></span>B站</span>
+        <span class="platform-tag coming-soon"><span class="dot"></span>小红书<span class="coming-badge">待支持</span></span>
+        <span class="platform-tag coming-soon"><span class="dot"></span>微博<span class="coming-badge">待支持</span></span>
       </div>
       <div class="loading-spinner-inline" id="loadingSpinner" style="display:none;">
         <div class="spinner-wrapper">
@@ -755,7 +765,7 @@ body.error .state-success { display: none !important; }
       <article class="feature-card">
         <div class="feature-icon"><svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="28" fill="#E8F2FF"/><path d="M16 20h24v16H16V20Z" fill="#007AFF"/><rect x="20" y="24" width="16" height="8" rx="1" fill="#fff"/><circle cx="28" cy="17" r="2" fill="#007AFF"/><circle cx="28" cy="39" r="2" fill="#007AFF"/></svg></div>
         <h3>多平台支持</h3>
-        <p>覆盖抖音、快手、B站等主流短视频平台</p>
+        <p>覆盖抖音、快手、B站，小红书、微博即将支持</p>
       </article>
     </div>
   </div>
@@ -776,7 +786,7 @@ body.error .state-success { display: none !important; }
           <span>支持哪些平台？</span>
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
         </summary>
-        <div class="faq-answer">支持抖音、快手、B站等主流短视频平台。</div>
+        <div class="faq-answer">支持抖音、快手、B站，小红书、微博即将支持。</div>
       </details>
       <details class="faq-item">
         <summary class="faq-summary">
