@@ -964,7 +964,9 @@ function toggleFaq(summaryEl) {
 const API_BASE = 'https://api.919667.xyz/parse';
 
 // CORS 代理列表（按优先级依次尝试）
+// 首选本地代理（走本机家宽 IP，不被 B站 风控），公网代理为兜底
 const CORS_PROXIES = [
+  'http://localhost:8787/?url=',
   'https://api.allorigins.win/raw?url=',
   'https://corsproxy.io/?'
 ];
