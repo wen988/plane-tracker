@@ -1179,131 +1179,213 @@ function getProxyDownloadUrl(url) {
   return downloadBase + '?download=1&url=' + encodeURIComponent(url);
 }
 
-// 合并下载：使用 mp4box.js 在浏览器端合并视频流和音频流
+// ========== MP4 BOX 解析工具函数 ==========
+
+function concatBuffers(buffers) {
+  const total = buffers.reduce((s, b) => s + b.byteLength, 0);
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const b of buffers) {
+    result.set(new Uint8Array(b), offset);
+    offset += b.byteLength;
+  }
+  return result.buffer;
+}
+
+function parseMP4Boxes(buf) {
+  const boxes = [];
+  let offset = 0;
+  const view = new DataView(buf);
+  while (offset < buf.byteLength - 8) {
+    let size = view.getUint32(offset);
+    const typeBytes = new Uint8Array(buf.slice(offset + 4, offset + 8));
+    const type = String.fromCharCode(...typeBytes);
+    let headerSize = 8;
+    if (size === 0) { size = buf.byteLength - offset; }
+    else if (size === 1) { size = Number(view.getBigUint64(offset + 8)); headerSize = 16; }
+    if (size < 8) break;
+    boxes.push({ type, offset, size, headerSize, data: buf.slice(offset, offset + size) });
+    offset += size;
+  }
+  return boxes;
+}
+
+function findBox(boxes, type) {
+  return boxes.find(function(b) { return b.type === type; });
+}
+
+function parseSubBoxes(parentBox) {
+  var headerSize = parentBox.headerSize || 8;
+  var inner = parentBox.data.slice(headerSize);
+  return parseMP4Boxes(inner);
+}
+
+function extractSegments(buf, startOffset) {
+  var segments = [];
+  var offset = startOffset;
+  var view = new DataView(buf);
+  while (offset < buf.byteLength - 8) {
+    var size = view.getUint32(offset);
+    if (size === 0) { size = buf.byteLength - offset; }
+    else if (size === 1) { size = Number(view.getBigUint64(offset + 8)); }
+    if (size < 8) break;
+    segments.push(buf.slice(offset, offset + size));
+    offset += size;
+  }
+  return segments;
+}
+
+function interleaveSegments(vSegs, aSegs) {
+  var result = [];
+  var maxLen = Math.max(vSegs.length, aSegs.length);
+  for (var i = 0; i < maxLen; i++) {
+    if (i < vSegs.length) result.push(vSegs[i]);
+    if (i < aSegs.length) result.push(aSegs[i]);
+  }
+  return result;
+}
+
+// 合并视频和音频的 moov box（DASH init segment）
+function mergeMoov(vMoovBox, aMoovBox) {
+  var vMoov = parseSubBoxes(vMoovBox);
+  var aMoov = parseSubBoxes(aMoovBox);
+
+  var mvhd = findBox(vMoov, 'mvhd') || findBox(aMoov, 'mvhd');
+  var vTrak = findBox(vMoov, 'trak');
+  var aTrak = findBox(aMoov, 'trak');
+
+  if (!mvhd || !vTrak || !aTrak) {
+    throw new Error('无法解析 moov 结构：缺少 mvhd 或 trak');
+  }
+
+  // 取两者中较大的 duration 写入合并后的 mvhd
+  var mvhdData = new Uint8Array(mvhd.data);
+  var view = new DataView(mvhdData.buffer, mvhdData.byteOffset, mvhdData.byteLength);
+
+  // mvhd body: version(1) + flags(3) + creation_time(4) + modification_time(4) + timescale(4) + duration(4 or 8)
+  var version = view.getUint8(mvhd.headerSize || 8);
+  var durationOffset = (mvhd.headerSize || 8) + 4 + 4 + 4 + 4; // timescale 之后
+
+  // 读取视频 moov 的 mvhd duration
+  var vMvhd = findBox(vMoov, 'mvhd');
+  var aMvhd = findBox(aMoov, 'mvhd');
+  var vMvhdData = new Uint8Array(vMvhd.data);
+  var aMvhdData = new Uint8Array(aMvhd.data);
+  var vDuration, aDuration;
+
+  if (version === 0) {
+    vDuration = new DataView(vMvhdData.buffer, vMvhdData.byteOffset + durationOffset, 4).getUint32(0);
+    aDuration = new DataView(aMvhdData.buffer, aMvhdData.byteOffset + durationOffset, 4).getUint32(0);
+    var maxDuration = Math.max(vDuration, aDuration);
+    new DataView(mvhdData.buffer, mvhdData.byteOffset + durationOffset, 4).setUint32(0, maxDuration);
+  } else {
+    vDuration = new DataView(vMvhdData.buffer, vMvhdData.byteOffset + durationOffset, 8).getBigUint64(0);
+    aDuration = new DataView(aMvhdData.buffer, aMvhdData.byteOffset + durationOffset, 8).getBigUint64(0);
+    var maxDurationBig = vDuration > aDuration ? vDuration : aDuration;
+    new DataView(mvhdData.buffer, mvhdData.byteOffset + durationOffset, 8).setBigUint64(0, maxDurationBig);
+  }
+
+  // 构建合并后的 mvex（包含视频和音频的 trex）
+  var vMvex = findBox(vMoov, 'mvex');
+  var aMvex = findBox(aMoov, 'mvex');
+  var vTrexBox = parseSubBoxes(vMvex).find(function(b) { return b.type === 'trex'; });
+  var aTrexBox = parseSubBoxes(aMvex).find(function(b) { return b.type === 'trex'; });
+
+  var mvexBody = concatBuffers([vTrexBox.data, aTrexBox.data]);
+  var mvexHeader = new Uint8Array(8);
+  new DataView(mvexHeader.buffer).setUint32(0, mvexBody.byteLength + 8);
+  mvexHeader.set(new TextEncoder().encode('mvex'), 4);
+  var newMvex = concatBuffers([mvexHeader.buffer, mvexBody]);
+
+  // 构建 moov body: mvhd + vTrak + aTrak + mvex
+  var moovBody = concatBuffers([
+    mvhdData.buffer.slice(mvhdData.byteOffset, mvhdData.byteOffset + mvhdData.byteLength),
+    vTrak.data,
+    aTrak.data,
+    newMvex
+  ]);
+
+  var moovHeader = new Uint8Array(8);
+  new DataView(moovHeader.buffer).setUint32(0, moovBody.byteLength + 8);
+  moovHeader.set(new TextEncoder().encode('moov'), 4);
+
+  return concatBuffers([moovHeader.buffer, moovBody]);
+}
+
+// 合并下载：手动解析 DASH fMP4 box 结构，将视频流和音频流拼接为合轨 MP4
 async function mergeAndDownload() {
-  const previewEl = document.querySelector('.video-preview');
-  const videoUrl = previewEl.dataset.videoUrl;
-  const musicUrl = previewEl.dataset.musicUrl;
-  const title = (previewEl.dataset.title || 'bilibili_video').replace(/[\\/:*?"<>|]/g, '_');
+  var previewEl = document.querySelector('.video-preview');
+  var videoUrl = previewEl.dataset.videoUrl;
+  var musicUrl = previewEl.dataset.musicUrl;
+  var title = (previewEl.dataset.title || 'bilibili_video').replace(/[\\/:*?"<>|]/g, '_');
 
   if (!videoUrl || !musicUrl) {
     alert('此视频无独立音轨，请使用普通下载');
     return;
   }
 
-  const btn = document.getElementById('downloadMerge');
+  var btn = document.getElementById('downloadMerge');
   btn.disabled = true;
-  btn.textContent = '合并中...';
+  btn.textContent = '下载中 0%';
 
   try {
-    const proxyV = getProxyDownloadUrl(videoUrl);
-    const proxyA = getProxyDownloadUrl(musicUrl);
+    var proxyV = getProxyDownloadUrl(videoUrl);
+    var proxyA = getProxyDownloadUrl(musicUrl);
 
-    // 并发 fetch 两路流
-    const [respV, respA] = await Promise.all([fetch(proxyV), fetch(proxyA)]);
-    if (!respV.ok) throw new Error('视频流下载失败: HTTP ' + respV.status);
-    if (!respA.ok) throw new Error('音频流下载失败: HTTP ' + respA.status);
-
-    const totalV = parseInt(respV.headers.get('content-length') || '0', 10);
-    const totalA = parseInt(respA.headers.get('content-length') || '0', 10);
-    const total = (totalV || 0) + (totalA || 0);
-    let downloaded = 0;
-
-    // 读取视频流
-    const readerV = respV.body.getReader();
-    const chunksV = [];
-    while (true) {
-      const { done, value } = await readerV.read();
-      if (done) break;
-      chunksV.push(value);
-      downloaded += value.length;
-      if (total > 0) {
-        btn.textContent = `下载中 ${Math.round(downloaded / total * 100)}%`;
-      }
+    var vResp, aResp;
+    try {
+      var results = await Promise.all([fetch(proxyV), fetch(proxyA)]);
+      vResp = results[0]; aResp = results[1];
+    } catch (e) {
+      throw new Error('网络请求失败：' + e.message);
     }
-    const videoBuffer = new Uint8Array(chunksV.reduce((s, c) => s + c.length, 0));
-    let offset = 0;
-    for (const c of chunksV) { videoBuffer.set(c, offset); offset += c.length; }
 
-    // 读取音频流
-    const readerA = respA.body.getReader();
-    const chunksA = [];
-    while (true) {
-      const { done, value } = await readerA.read();
-      if (done) break;
-      chunksA.push(value);
-      downloaded += value.length;
-      if (total > 0) {
-        btn.textContent = `下载中 ${Math.round(downloaded / total * 100)}%`;
-      }
-    }
-    const audioBuffer = new Uint8Array(chunksA.reduce((s, c) => s + c.length, 0));
-    offset = 0;
-    for (const c of chunksA) { audioBuffer.set(c, offset); offset += c.length; }
+    if (!vResp.ok) throw new Error('视频流下载失败: HTTP ' + vResp.status);
+    if (!aResp.ok) throw new Error('音频流下载失败: HTTP ' + aResp.status);
+
+    btn.textContent = '下载中 50%';
+    var vBuf = await vResp.arrayBuffer();
+    var aBuf = await aResp.arrayBuffer();
 
     btn.textContent = '合并中...';
 
-    // 使用 MP4Box 合并
-    const mp4boxfile = MP4Box.createFile();
+    // 解析两路流的 MP4 box 结构
+    var vBoxes = parseMP4Boxes(vBuf);
+    var aBoxes = parseMP4Boxes(aBuf);
 
-    const mergedPromise = new Promise((resolve, reject) => {
-      mp4boxfile.onReady = function (info) {
-        try {
-          const buffer = mp4boxfile.getBuffer();
-          if (!buffer) {
-            reject(new Error('MP4Box getBuffer 返回空'));
-            return;
-          }
-          const blob = new Blob([buffer], { type: 'video/mp4' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = title + '.mp4';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          resolve();
-        } catch (e) {
-          reject(e);
-        }
-      };
+    var ftyp = findBox(vBoxes, 'ftyp');
+    var vMoov = findBox(vBoxes, 'moov');
+    var aMoov = findBox(aBoxes, 'moov');
 
-      mp4boxfile.onError = function (e) {
-        reject(new Error('MP4Box 处理错误: ' + (e || '未知错误')));
-      };
-    });
+    if (!vMoov) throw new Error('视频流中未找到 moov box');
+    if (!aMoov) throw new Error('音频流中未找到 moov box');
 
-    // 视频 track
-    const videoDS = mp4boxfile.addDataStream();
-    const videoTrackId = mp4boxfile.addTrack({
-      type: 'video',
-      timescale: 1000000,
-      width: 1920,
-      height: 1080,
-      nb_samples: 1,
-      duration: 1000000
-    });
+    // 提取视频和音频的媒体段（跳过 init segment = ftyp + moov）
+    var vInitEnd = vMoov.offset + vMoov.size;
+    var aInitEnd = aMoov.offset + aMoov.size;
+    var vSegments = extractSegments(vBuf, vInitEnd);
+    var aSegments = extractSegments(aBuf, aInitEnd);
 
-    // 音频 track
-    const audioDS = mp4boxfile.addDataStream();
-    const audioTrackId = mp4boxfile.addTrack({
-      type: 'audio',
-      timescale: 48000,
-      nb_samples: 1,
-      duration: 48000
-    });
+    // 交错排列 moof+mdat 片段
+    var interleaved = interleaveSegments(vSegments, aSegments);
 
-    // 喂视频数据
-    videoDS.appendBuffer(videoBuffer.buffer);
-    videoDS.endOfStream();
+    // 构建合并后的 init segment：ftyp + merged_moov
+    var mergedMoov = mergeMoov(vMoov, aMoov);
 
-    // 喂音频数据
-    audioDS.appendBuffer(audioBuffer.buffer);
-    audioDS.endOfStream();
+    // 拼接最终 MP4
+    var parts = [ftyp.data, mergedMoov].concat(interleaved);
+    var output = concatBuffers(parts);
 
-    mp4boxfile.start();
-    await mergedPromise;
+    btn.textContent = '保存中...';
+    var blob = new Blob([output], { type: 'video/mp4' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = title + '.mp4';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
     btn.disabled = false;
     btn.textContent = '合并下载（带声音）';
