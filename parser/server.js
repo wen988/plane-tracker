@@ -277,17 +277,18 @@ async function parseBilibili(shareUrl) {
   if (!cid) throw new Error('未找到视频 cid');
 
   const playResp = await fetchWithTimeout(
-    `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=64&fnval=80&fnver=0&fourk=1&platform=web`,
+    `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=16&fnver=0&platform=web`,
     { headers: apiHeaders }
   );
   const playData = await playResp.json();
   if (playData.code !== 0) throw new Error(playData.message || '获取播放地址失败');
 
-  // 诊断：输出B站实际返回的画质ID
+  // 诊断
   const availQualities = (playData.data?.dash?.video || []).map(v => v.id).join(',');
   const acceptQuality = playData.data?.accept_quality || [];
   const acceptDesc = playData.data?.accept_description || [];
-  console.log(`[B站] ${bvid} qn=64 → 可用画质ID: [${availQualities}], accept_quality: [${acceptQuality}], accept_desc: [${acceptDesc}]`);
+  const audioCount = (playData.data?.dash?.audio || []).length;
+  console.log(`[B站] ${bvid} qn=80 fnval=16 → 画质:[${availQualities}], accept:[${acceptQuality}], 音频流:${audioCount}个`);
 
   let videoUrl = '';
   const bestVideo = playData.data?.dash?.video
