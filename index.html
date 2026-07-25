@@ -1207,9 +1207,12 @@ async function mergeAndDownload() {
   btn.textContent = '加载合并引擎...';
 
   try {
+    var ffmpegErrors = [];
     var ffmpeg = FFmpeg.createFFmpeg({
       corePath: 'https://unpkg.com/@ffmpeg/core@0.11.1/dist/ffmpeg-core.js',
-      log: false
+      logger: function(msg) {
+        if (msg.type === 'stderr') ffmpegErrors.push(msg.message);
+      }
     });
     await ffmpeg.load();
 
@@ -1226,6 +1229,15 @@ async function mergeAndDownload() {
     if (!aResp.ok) throw new Error('音频流下载失败: HTTP ' + aResp.status);
     var aBuf = await aResp.arrayBuffer();
 
+    // 检查音频数据是否有效
+    if (aBuf.byteLength <= 1000) {
+      btn.textContent = '音频流获取失败，仅下载视频';
+      btn.disabled = false;
+      alert('音频流获取失败（数据为空或损坏），将仅下载视频。');
+      downloadFile('video');
+      return;
+    }
+
     btn.textContent = '合并中...';
     ffmpeg.FS('writeFile', 'video.mp4', new Uint8Array(vBuf));
     ffmpeg.FS('writeFile', 'audio.mp4', new Uint8Array(aBuf));
@@ -1233,9 +1245,11 @@ async function mergeAndDownload() {
     await ffmpeg.run(
       '-i', 'video.mp4',
       '-i', 'audio.mp4',
-      '-c', 'copy',
+      '-c:v', 'copy',
+      '-c:a', 'aac',
       '-map', '0:v:0',
       '-map', '1:a:0',
+      '-shortest',
       '-movflags', '+faststart',
       'output.mp4'
     );
@@ -1262,7 +1276,8 @@ async function mergeAndDownload() {
     btn.textContent = '合并下载（带声音）';
   } catch (e) {
     console.error('ffmpeg.wasm 合并失败:', e);
-    btn.textContent = '分别下载视频+音频';
+    var stderrInfo = ffmpegErrors.length > 0 ? ' (' + ffmpegErrors.join('; ').substring(0, 60) + ')' : '';
+    btn.textContent = '合并失败' + stderrInfo + '，降级分别下载';
     btn.disabled = false;
     downloadFile('video');
     setTimeout(function() { downloadFile('music'); }, 800);
