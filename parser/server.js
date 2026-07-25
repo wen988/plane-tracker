@@ -10,7 +10,6 @@ const http = require('http');
 const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1';
 const FETCH_TIMEOUT = 7000;
 const OVERALL_TIMEOUT = 12000;
-const PROXY_BASE = 'https://vercel-bili-proxy-chi.vercel.app/api/bilibili';
 
 // ==================== HTTP Server ====================
 
@@ -112,7 +111,7 @@ function isKuaishou(url) {
 }
 
 function isBilibili(url) {
-  return /bilibili\.com|b23\.tv|b22\.tv/.test(url);
+  return /bilibili\.com|bilivideo\.com|bilibideo\.com|hdslb\.com|b23\.tv|b22\.tv/.test(url);
 }
 
 // ==================== 抖音解析 ====================
@@ -333,48 +332,28 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT) {
 }
 
 async function proxyDownload(res, targetUrl) {
-  // B站 CDN 走 Vercel 流式代理（绕过 Render IP 可能被封的情况）
-  if (targetUrl.includes('bilivideo.com') || targetUrl.includes('hdslb.com')) {
-    const streamUrl = `${PROXY_BASE}?action=stream&url=${encodeURIComponent(targetUrl)}`;
-    const proxyResp = await fetchWithTimeout(streamUrl, {}, 30000);
-    if (!proxyResp.ok) {
-      res.writeHead(502, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, error: `下载代理失败 (${proxyResp.status})` }));
-      return;
-    }
-    res.writeHead(200, {
-      'Content-Type': proxyResp.headers.get('Content-Type') || 'video/mp4',
-      'Content-Disposition': 'attachment; filename="bilibili_video.mp4"',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Expose-Headers': 'Content-Disposition',
-      'Accept-Ranges': 'bytes'
-    });
-    if (proxyResp.body) {
-      const reader = proxyResp.body.getReader();
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-    }
-    res.end();
-    return;
-  }
-
   let referer = '';
   if (/douyin\.com|snssdk\.com|douyinvod\.com/.test(targetUrl)) referer = 'https://www.douyin.com/';
   else if (/kuaishou\.com|yximgs\.com/.test(targetUrl)) referer = 'https://www.kuaishou.com/';
-  else if (/bilibili\.com|bilivideo\.com/.test(targetUrl)) referer = 'https://www.bilibili.com/';
+  else if (/bilibili\.com|bilivideo\.com|bilibideo\.com|hdslb\.com/.test(targetUrl)) referer = 'https://www.bilibili.com/';
 
   const opts = { headers: { 'User-Agent': MOBILE_UA } };
   if (referer) opts.headers['Referer'] = referer;
 
-  const dlResp = await fetchWithTimeout(targetUrl, opts);
+  const dlResp = await fetchWithTimeout(targetUrl, opts, 30000);
+  if (!dlResp.ok) {
+    res.writeHead(502, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: false, error: `下载失败 (${dlResp.status})` }));
+    return;
+  }
+
   const ct = dlResp.headers.get('Content-Type') || 'application/octet-stream';
+  const isBili = /bilivideo|hdslb/.test(targetUrl);
+  const filename = isBili ? 'bilibili_video.mp4' : 'video.mp4';
 
   res.writeHead(200, {
     'Content-Type': ct,
-    'Content-Disposition': 'attachment; filename="video.mp4"',
+    'Content-Disposition': `attachment; filename="${filename}"`,
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Expose-Headers': 'Content-Disposition',
     'Cache-Control': 'public, max-age=3600'
