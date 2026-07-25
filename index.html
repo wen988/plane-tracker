@@ -988,6 +988,21 @@ async function doParse() {
       return;
     }
 
+    // B站 需要浏览器端直调 B站 API（CF/Vercel IP 均被封）
+    if (data.needsClientResolve && data.bvid) {
+      try {
+        const bi = await resolveBilibili(data.bvid);
+        data.title = bi.title;
+        data.cover = bi.cover;
+        data.author = bi.author;
+        data.avatar = bi.avatar;
+        data.videoUrl = bi.videoUrl;
+      } catch (e) {
+        showError('B站解析失败：' + e.message);
+        return;
+      }
+    }
+
     showResult(data);
   } catch (e) {
     showError('网络请求失败：' + e.message);
@@ -999,6 +1014,41 @@ async function doParseContinue() {
   if (!url) return;
   document.getElementById('urlInput').value = url;
   await doParse();
+}
+
+// ========== B站 浏览器直调（绕过服务器 IP 风控） ==========
+async function resolveBilibili(bvid) {
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+  const headers = { 'User-Agent': UA, 'Referer': 'https://www.bilibili.com/' };
+
+  // 1. 获取视频信息
+  const viewResp = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`, { headers });
+  const viewData = await viewResp.json();
+  if (viewData.code !== 0) throw new Error(viewData.message || '获取视频信息失败');
+
+  const vi = viewData.data;
+  const title = vi.title || '';
+  const cover = vi.pic || '';
+  const authorName = vi.owner?.name || '';
+  const authorAvatar = vi.owner?.face || '';
+  const cid = vi.cid;
+
+  // 2. 获取播放地址
+  const playResp = await fetch(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=1&fnver=0&fourk=1`, { headers });
+  const playData = await playResp.json();
+  if (playData.code !== 0) throw new Error(playData.message || '获取播放地址失败');
+
+  let videoUrl = '';
+  const pd = playData.data;
+  if (pd.durl?.length > 0) {
+    videoUrl = pd.durl[0].url || pd.durl[0].backup_url?.[0] || '';
+  }
+  if (!videoUrl && pd.dash?.video?.length > 0) {
+    videoUrl = pd.dash.video[0].baseUrl || pd.dash.video[0].base_url || '';
+  }
+  if (!videoUrl) throw new Error('未找到可用的视频流');
+
+  return { title, cover, author: authorName, avatar: authorAvatar, videoUrl };
 }
 
 // ========== RESULT DISPLAY ==========
@@ -1039,6 +1089,7 @@ function showResult(data) {
   if (data.videoUrl) previewEl.dataset.videoUrl = data.videoUrl;
   if (data.musicUrl) previewEl.dataset.musicUrl = data.musicUrl;
   if (data.proxyVideoUrl) previewEl.dataset.proxyVideoUrl = data.proxyVideoUrl;
+  if (data.platform) previewEl.dataset.platform = data.platform;
 
   // File info
   if (data.size) document.getElementById('fileSize').textContent = data.size;
@@ -1051,16 +1102,20 @@ function downloadFile(type) {
   const previewEl = document.querySelector('.video-preview');
   const key = type === 'video' ? 'videoUrl' : 'musicUrl';
   const url = previewEl.dataset[key];
-  if (url) {
-    // B站视频直走 Vercel 流式代理（跳过 Worker，避免 CDN 过期）
-    const proxyUrl = previewEl.dataset.proxyVideoUrl;
-    const downloadUrl = (type === 'video' && proxyUrl)
-      ? proxyUrl
-      : API_BASE + '?download=1&url=' + encodeURIComponent(url);
-    window.open(downloadUrl, '_blank');
-  } else {
-    alert('下载地址暂不可用');
+  if (!url) { alert('下载地址暂不可用'); return; }
+
+  // B站：浏览器直连 CDN 下载，不走任何代理
+  if (previewEl.dataset.platform === 'B站') {
+    window.open(url, '_blank');
+    return;
   }
+
+  // 其他平台：走 Worker 代理下载
+  const proxyUrl = previewEl.dataset.proxyVideoUrl;
+  const downloadUrl = (type === 'video' && proxyUrl)
+    ? proxyUrl
+    : API_BASE + '?download=1&url=' + encodeURIComponent(url);
+  window.open(downloadUrl, '_blank');
 }
 
 // ========== ERROR DISPLAY ==========
