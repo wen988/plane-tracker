@@ -962,7 +962,12 @@ function toggleFaq(summaryEl) {
 
 // ========== PARSE LOGIC ==========
 const API_BASE = 'https://api.919667.xyz/parse';
-const CORS_PROXY = 'https://corsproxy.io/?';
+
+// CORS 代理列表（按优先级依次尝试）
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?'
+];
 
 // 检测是否为 B站 链接
 function isBilibiliUrl(url) {
@@ -982,7 +987,6 @@ function extractBvId(url) {
 async function parseBilibiliDirect(inputUrl) {
   let bvid = extractBvId(inputUrl);
 
-  // 如果包含 features=share 尝试解码
   if (!bvid && inputUrl.includes('features=share')) {
     try {
       const u = new URL(inputUrl);
@@ -993,19 +997,33 @@ async function parseBilibiliDirect(inputUrl) {
 
   if (!bvid) throw new Error('无法识别B站视频ID，请确认链接格式正确');
 
-  const fetchJson = async (url) => {
-    const resp = await fetch(CORS_PROXY + encodeURIComponent(url));
-    if (!resp.ok) throw new Error('代理请求失败 (HTTP ' + resp.status + ')');
-    const text = await resp.text();
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      throw new Error('B站接口返回异常，可能触发了风控');
+  // 尝试多个 CORS 代理
+  const fetchWithProxy = async (url) => {
+    let lastErr;
+    for (const proxy of CORS_PROXIES) {
+      try {
+        const resp = await fetch(proxy + encodeURIComponent(url));
+        if (!resp.ok) {
+          lastErr = new Error('HTTP ' + resp.status);
+          continue;
+        }
+        const text = await resp.text();
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          lastErr = new Error('B站接口返回异常，可能触发了风控');
+          continue;
+        }
+      } catch (e) {
+        lastErr = e;
+        continue;
+      }
     }
+    throw lastErr || new Error('所有代理均不可用');
   };
 
   // 1. 获取视频基本信息
-  const viewData = await fetchJson(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
+  const viewData = await fetchWithProxy(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
   if (viewData.code !== 0) {
     throw new Error(viewData.message || '获取视频信息失败');
   }
@@ -1014,8 +1032,8 @@ async function parseBilibiliDirect(inputUrl) {
   const cid = v.cid;
   if (!cid) throw new Error('未找到视频流信息');
 
-  // 2. 获取播放地址（最高画质）
-  const playData = await fetchJson(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=1&fourk=1`);
+  // 2. 获取播放地址
+  const playData = await fetchWithProxy(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=1&fourk=1`);
   if (playData.code !== 0) {
     throw new Error(playData.message || '获取播放地址失败');
   }
