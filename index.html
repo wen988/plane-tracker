@@ -961,7 +961,8 @@ function toggleFaq(summaryEl) {
 }
 
 // ========== PARSE LOGIC ==========
-const API_BASE = 'https://plane-tracker-jkib.onrender.com';
+const API_BASE = 'https://api.919667.xyz/parse'; // 抖音/快手走 CF Worker
+const BILI_API_BASE = 'https://plane-tracker-jkib.onrender.com'; // B站走 Render
 
 // CORS 代理列表（按优先级依次尝试）
 // 首选本地代理（走本机家宽 IP，不被 B站 风控），公网代理为兜底
@@ -1080,8 +1081,9 @@ async function doParse() {
   try {
     let data;
 
-    // 所有平台统一走 Worker 解析
-    const resp = await fetch(API_BASE + '?url=' + encodeURIComponent(url));
+    // 按平台分流：B站走 Render，抖音/快手走 CF Worker
+    const baseUrl = isBilibiliUrl(url) ? BILI_API_BASE : API_BASE;
+    const resp = await fetch(baseUrl + '?url=' + encodeURIComponent(url));
     data = await resp.json();
 
     if (!data.success) {
@@ -1157,9 +1159,11 @@ function downloadFile(type) {
 
   // 统一走代理下载，确保 Content-Disposition: attachment 强制下载
   const proxyUrl = previewEl.dataset.proxyVideoUrl;
+  const isBili = isBilibiliUrl(url);
+  const downloadBase = isBili ? BILI_API_BASE : API_BASE;
   const downloadUrl = (type === 'video' && proxyUrl)
     ? proxyUrl
-    : API_BASE + '?download=1&url=' + encodeURIComponent(url);
+    : downloadBase + '?download=1&url=' + encodeURIComponent(url);
   window.open(downloadUrl, '_blank');
 }
 
