@@ -711,7 +711,7 @@ body.error #mainInputSection { display: none !important; }
         <div class="spinner-pulse"></div>
       </div>
       <p class="loading-text">正在解析视频...</p>
-      <p class="loading-sub">请稍候，通常只需几秒钟</p>
+      <p class="loading-sub">首次访问约需等待几十秒，之后秒级响应</p>
     </div>
   </div>
 </section>
@@ -1155,13 +1155,7 @@ function downloadFile(type) {
   const url = previewEl.dataset[key];
   if (!url) { alert('下载地址暂不可用'); return; }
 
-  // B站：浏览器直连 CDN 下载，不走任何代理
-  if (previewEl.dataset.platform === 'B站') {
-    window.open(url, '_blank');
-    return;
-  }
-
-  // 其他平台：走 Worker 代理下载
+  // 统一走代理下载，确保 Content-Disposition: attachment 强制下载
   const proxyUrl = previewEl.dataset.proxyVideoUrl;
   const downloadUrl = (type === 'video' && proxyUrl)
     ? proxyUrl
