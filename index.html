@@ -1080,14 +1080,9 @@ async function doParse() {
   try {
     let data;
 
-    if (isBilibiliUrl(url)) {
-      // B站：浏览器直调，绕过 Cloudflare IP 风控
-      data = await parseBilibiliDirect(url);
-    } else {
-      // 其他平台：走 Worker
-      const resp = await fetch(API_BASE + '?url=' + encodeURIComponent(url));
-      data = await resp.json();
-    }
+    // 所有平台统一走 Worker 解析
+    const resp = await fetch(API_BASE + '?url=' + encodeURIComponent(url));
+    data = await resp.json();
 
     if (!data.success) {
       showError(data.error || '解析失败，请检查链接');
