@@ -277,20 +277,24 @@ async function parseBilibili(shareUrl) {
   if (!cid) throw new Error('未找到视频 cid');
 
   const playResp = await fetchWithTimeout(
-    `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=1`,
+    `https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=64&fnval=80&fourk=1`,
     { headers: apiHeaders }
   );
   const playData = await playResp.json();
   if (playData.code !== 0) throw new Error(playData.message || '获取播放地址失败');
 
   let videoUrl = '';
-  if (playData.data?.durl?.length > 0) {
-    videoUrl = playData.data.durl[0].url || playData.data.durl[0].backup_url?.[0] || '';
-  }
+  const bestVideo = playData.data?.dash?.video
+    ?.filter(v => v.id)
+    ?.sort((a, b) => b.id - a.id)[0] || playData.data?.dash?.video?.[0];
+  videoUrl = bestVideo?.baseUrl || bestVideo?.base_url || '';
   if (!videoUrl) throw new Error('获取播放地址失败，视频可能需要登录或已失效');
 
-  // durl 格式自带音频，无需单独 audio URL
   let musicUrl = '';
+  const dashAudio = playData.data?.dash?.audio;
+  if (dashAudio && dashAudio.length > 0) {
+    musicUrl = dashAudio[0].baseUrl || dashAudio[0].base_url || '';
+  }
 
   return {
     title, video_url: videoUrl, music_url: musicUrl, cover_url: coverUrl,
@@ -334,7 +338,7 @@ async function proxyDownload(res, targetUrl) {
   const opts = { headers: { 'User-Agent': MOBILE_UA } };
   if (referer) opts.headers['Referer'] = referer;
 
-  const dlResp = await fetchWithTimeout(targetUrl, opts, 30000);
+  const dlResp = await fetchWithTimeout(targetUrl, opts, 60000);
   if (!dlResp.ok) {
     res.writeHead(502, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, error: `下载失败 (${dlResp.status})` }));
