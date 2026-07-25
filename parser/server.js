@@ -262,6 +262,10 @@ async function parseBilibili(shareUrl) {
     'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'zh-CN,zh;q=0.9'
   };
+  // B站登录Cookie（Render环境变量 BILI_COOKIE，用于解锁高清画质）
+  if (process.env.BILI_COOKIE) {
+    apiHeaders['Cookie'] = process.env.BILI_COOKIE;
+  }
 
   const viewResp = await fetchWithTimeout(
     `https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`,
