@@ -961,8 +961,86 @@ function toggleFaq(summaryEl) {
 }
 
 // ========== PARSE LOGIC ==========
-// Modify this URL to point to your Cloudflare Worker endpoint
 const API_BASE = 'https://api.919667.xyz/parse';
+const CORS_PROXY = 'https://corsproxy.io/?';
+
+// 检测是否为 B站 链接
+function isBilibiliUrl(url) {
+  return /bilibili\.com|b23\.tv|b22\.tv/.test(url);
+}
+
+// 从 URL 提取 BV/AV 号（浏览器的 CORS 代理不拦截重定向链接，直接解析即可）
+function extractBvId(url) {
+  const bvMatch = url.match(/BV[a-zA-Z0-9]{10}/);
+  if (bvMatch) return bvMatch[0];
+  const avMatch = url.match(/av(\d+)/i);
+  if (avMatch) return avMatch[0].toUpperCase();
+  return '';
+}
+
+// 浏览器直调 B站 API（通过 CORS 代理，走用户自身 IP 不受 Cloudflare 风控）
+async function parseBilibiliDirect(inputUrl) {
+  let bvid = extractBvId(inputUrl);
+
+  // 如果包含 features=share 尝试解码
+  if (!bvid && inputUrl.includes('features=share')) {
+    try {
+      const u = new URL(inputUrl);
+      const text = u.searchParams.get('text') || '';
+      bvid = extractBvId(text) || extractBvId(decodeURIComponent(text));
+    } catch (e) {}
+  }
+
+  if (!bvid) throw new Error('无法识别B站视频ID，请确认链接格式正确');
+
+  const fetchJson = async (url) => {
+    const resp = await fetch(CORS_PROXY + encodeURIComponent(url));
+    if (!resp.ok) throw new Error('代理请求失败 (HTTP ' + resp.status + ')');
+    const text = await resp.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error('B站接口返回异常，可能触发了风控');
+    }
+  };
+
+  // 1. 获取视频基本信息
+  const viewData = await fetchJson(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`);
+  if (viewData.code !== 0) {
+    throw new Error(viewData.message || '获取视频信息失败');
+  }
+
+  const v = viewData.data;
+  const cid = v.cid;
+  if (!cid) throw new Error('未找到视频流信息');
+
+  // 2. 获取播放地址（最高画质）
+  const playData = await fetchJson(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=1&fourk=1`);
+  if (playData.code !== 0) {
+    throw new Error(playData.message || '获取播放地址失败');
+  }
+
+  // 3. 提取视频 URL
+  let videoUrl = '';
+  const pd = playData.data;
+  if (pd.durl?.length > 0) {
+    videoUrl = pd.durl[0].url || pd.durl[0].backup_url?.[0] || '';
+  }
+  if (!videoUrl && pd.dash?.video?.length > 0) {
+    videoUrl = pd.dash.video[0].baseUrl || pd.dash.video[0].base_url || '';
+  }
+  if (!videoUrl) throw new Error('获取播放地址失败');
+
+  return {
+    success: true,
+    title: v.title || '',
+    videoUrl: videoUrl,
+    cover: v.pic || '',
+    author: v.owner?.name || '',
+    avatar: v.owner?.face || '',
+    platform: 'B站'
+  };
+}
 
 async function doParse() {
   const input = document.getElementById('urlInput');
@@ -980,32 +1058,25 @@ async function doParse() {
   btn.style.opacity = '0.6';
 
   try {
-    const resp = await fetch(API_BASE + '?url=' + encodeURIComponent(url));
-    const data = await resp.json();
+    let data;
+
+    if (isBilibiliUrl(url)) {
+      // B站：浏览器直调，绕过 Cloudflare IP 风控
+      data = await parseBilibiliDirect(url);
+    } else {
+      // 其他平台：走 Worker
+      const resp = await fetch(API_BASE + '?url=' + encodeURIComponent(url));
+      data = await resp.json();
+    }
 
     if (!data.success) {
       showError(data.error || '解析失败，请检查链接');
       return;
     }
 
-    // B站 需要浏览器端直调 B站 API（CF/Vercel IP 均被封）
-    if (data.needsClientResolve && data.bvid) {
-      try {
-        const bi = await resolveBilibili(data.bvid);
-        data.title = bi.title;
-        data.cover = bi.cover;
-        data.author = bi.author;
-        data.avatar = bi.avatar;
-        data.videoUrl = bi.videoUrl;
-      } catch (e) {
-        showError('B站解析失败：' + e.message);
-        return;
-      }
-    }
-
     showResult(data);
   } catch (e) {
-    showError('网络请求失败：' + e.message);
+    showError('解析失败：' + e.message);
   }
 }
 
@@ -1014,41 +1085,6 @@ async function doParseContinue() {
   if (!url) return;
   document.getElementById('urlInput').value = url;
   await doParse();
-}
-
-// ========== B站 浏览器直调（绕过服务器 IP 风控） ==========
-async function resolveBilibili(bvid) {
-  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-  const headers = { 'User-Agent': UA, 'Referer': 'https://www.bilibili.com/' };
-
-  // 1. 获取视频信息
-  const viewResp = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`, { headers });
-  const viewData = await viewResp.json();
-  if (viewData.code !== 0) throw new Error(viewData.message || '获取视频信息失败');
-
-  const vi = viewData.data;
-  const title = vi.title || '';
-  const cover = vi.pic || '';
-  const authorName = vi.owner?.name || '';
-  const authorAvatar = vi.owner?.face || '';
-  const cid = vi.cid;
-
-  // 2. 获取播放地址
-  const playResp = await fetch(`https://api.bilibili.com/x/player/playurl?bvid=${bvid}&cid=${cid}&qn=80&fnval=1&fnver=0&fourk=1`, { headers });
-  const playData = await playResp.json();
-  if (playData.code !== 0) throw new Error(playData.message || '获取播放地址失败');
-
-  let videoUrl = '';
-  const pd = playData.data;
-  if (pd.durl?.length > 0) {
-    videoUrl = pd.durl[0].url || pd.durl[0].backup_url?.[0] || '';
-  }
-  if (!videoUrl && pd.dash?.video?.length > 0) {
-    videoUrl = pd.dash.video[0].baseUrl || pd.dash.video[0].base_url || '';
-  }
-  if (!videoUrl) throw new Error('未找到可用的视频流');
-
-  return { title, cover, author: authorName, avatar: authorAvatar, videoUrl };
 }
 
 // ========== RESULT DISPLAY ==========
