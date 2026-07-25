@@ -1052,10 +1052,10 @@ function downloadFile(type) {
   const key = type === 'video' ? 'videoUrl' : 'musicUrl';
   const url = previewEl.dataset[key];
   if (url) {
-    // B站视频优先走 Vercel 流式代理（绕过 CDN Referer 校验）
+    // B站视频直走 Vercel 流式代理（跳过 Worker，避免 CDN 过期）
     const proxyUrl = previewEl.dataset.proxyVideoUrl;
     const downloadUrl = (type === 'video' && proxyUrl)
-      ? API_BASE + '?download=1&url=' + encodeURIComponent(url)
+      ? proxyUrl
       : API_BASE + '?download=1&url=' + encodeURIComponent(url);
     window.open(downloadUrl, '_blank');
   } else {
